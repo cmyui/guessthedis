@@ -1,46 +1,58 @@
+#!/usr/bin/env python3.9
 import dis
-import random
 import inspect
+import random
+import signal
+from types import FrameType
 from typing import Callable
-from cmyui import printc, Ansi
+
+from cmyui.logging import Ansi
+from cmyui.logging import printc
 
 functions = []
 
-def test_func(f):
+def test_func(f: Callable[..., object]) -> Callable[..., object]:
     functions.append(f)
     return f
 
-#@test_func
-#def f(x: float) -> float:
-#    return x * x
-#
-#@test_func
-#def f(x: float, y: float) -> float:
-#    return x / y
-#
-#@test_func
-#def f(x: str) -> str:
-#    return x.upper()
-#
-#@test_func
-#def f(x: int, y: int) -> str:
-#    x *= 2
-#    z = 'abc'
-#    return z * x ** y
-
-#@test_func
-#def f():
-#    return [x ** 2 for x in range(16)]
-
-#@test_func
-#def f():
-#    l = []
-#    for i in range(16):
-#        l.append(~i & 4)
-#    return l
+# TODO: some sort of function auto-generator using ast?
+# not sure how possible that is, but it would sure be neat.
 
 @test_func
-def f(x: int, y: str):
+def f(x) -> None:
+    len(x) % 2 == 0
+
+@test_func
+def f(x: float) -> float:
+    return x * x
+
+@test_func
+def f(x: float, y: float) -> float:
+    return x / y
+
+@test_func
+def f(x: str) -> str:
+    return x.upper()
+
+@test_func
+def f(x: int, y: int) -> str:
+    x *= 2
+    z = 'abc'
+    return z * x ** y
+
+@test_func
+def f() -> list[int]:
+    return [x ** 2 for x in range(16)]
+
+@test_func
+def f() -> list[int]:
+    l = []
+    for i in range(16):
+        l.append(~i & 4)
+    return l
+
+@test_func
+def f(x: int, y: str) -> tuple[int]:
     l = [*map(ord,y)]
     for i in range(max(len(y), abs(x ** ~len(y)))):
         l[i] ^= ord(l[i]) * 2
@@ -48,43 +60,20 @@ def f(x: int, y: str):
     del i
     return tuple(l)
 
-#@test_func
-#def f(x: int):
-#    y = 3 ^ x
-#    z = 4 * ~y
-#    s = 'miniature' * y ** len('lamp')
-#    return s[:z] * 5
-#
-#class A:
-#    def __init__(self, x: int, y: str) -> None:
-#        self.x = x
-#        self.y = y
-#    def __repr__(self) -> str:
-#        return '{x}: {y}'.format(**self.__dict__)
-#
-#@test_func
-#def f():
-#    return A(1, 'dn').__repr__()
+@test_func
+def f(x: int) -> str:
+    y = 3 ^ x
+    z = 4 * ~y
+    s = 'miniature' * y ** len('lamp')
+    return s[:z] * 5
 
-#@test_func
-#def f():
-#  class dn:
-#    def __init__(self):
-#      return 'b'
-#
-#    def print(self):
-#      return __import__('os').system('echo dn')
-#  return dn
-
-right = wrong = 0
-
-def test(f: Callable):
+def test_user(f: Callable[..., object]) -> bool:
     """Test the user on a single function.
        Returns 1 for correct, -1 for incorrect."""
     # get instructions, and print source
     instructions = [*dis.get_instructions(f)]
 
-    # ignore first line cuz it's the @test_func decorator
+    # ignore first line (it's the @test_func decorator)
     lines, _ = inspect.getsourcelines(f)
     printc(''.join(lines[1:]), Ansi.LBLUE)
 
@@ -94,7 +83,7 @@ def test(f: Callable):
         uinput = input(f'{idx * 2}: ').lower().split(' ')
         if uinput[0] != inst.opname.lower():
             printc(f'Incorrect opname - {inst.opname}\n', Ansi.LRED)
-            return -1
+            return False
 
         # if opcode takes args, check them
         if inst.opcode >= dis.HAVE_ARGUMENT:
@@ -106,19 +95,34 @@ def test(f: Callable):
 
             if len(uinput) != 2:
                 printc('Must provide argval!\n', Ansi.LRED)
-                return -1
+                return False
             if str(inst.argval).lower() != uinput[1]:
                 printc(f'Incorrect argval - {inst.argval}\n', Ansi.LRED)
-                return -1
+                return False
 
     printc('Correct!\n', Ansi.LGREEN)
-    return 1
+    return True
 
-while True:
-    # test the user on a random function from the list
-    result = test(random.choice(functions))
+if __name__ == '__main__':
+    correct = incorrect = 0
 
-    if result == 1:
-        right += 1
-    else:
-        wrong += 1
+    def handle_interrupt(sig_num: int, frame: FrameType) -> None:
+        print('\n\nThanks for playing! :)\n\nResults\n-------')
+        printc(f'Correct: {correct}', Ansi.LGREEN)
+        printc(f'Incorrect: {incorrect}', Ansi.LRED)
+        exit(0)
+
+    for sig in {signal.SIGINT, signal.SIGTERM, signal.SIGHUP}:
+        signal.signal(sig, handle_interrupt)
+
+    while True:
+        # test the user on a random function from the list
+        # TODO: teach the player & increase difficulty over time
+        function = random.choice(functions)
+
+        disassembled_correctly = test_user(function)
+
+        if disassembled_correctly:
+            correct += 1
+        else:
+            incorrect += 1
