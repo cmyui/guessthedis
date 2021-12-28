@@ -2,8 +2,6 @@
 import dis
 import inspect
 import random
-import signal
-from types import FrameType
 from typing import Callable
 
 from cmyui.logging import Ansi
@@ -103,26 +101,43 @@ def test_user(f: Callable[..., object]) -> bool:
     printc('Correct!\n', Ansi.LGREEN)
     return True
 
-if __name__ == '__main__':
+def main() -> int:
+    if not functions:
+        printc("No functions marked with @test_func", Ansi.LRED)
+        return 1
+
     correct = incorrect = 0
-
-    def handle_interrupt(sig_num: int, frame: FrameType) -> None:
-        print('\n\nThanks for playing! :)\n\nResults\n-------')
-        printc(f'Correct: {correct}', Ansi.LGREEN)
-        printc(f'Incorrect: {incorrect}', Ansi.LRED)
-        exit(0)
-
-    for sig in {signal.SIGINT, signal.SIGTERM, signal.SIGHUP}:
-        signal.signal(sig, handle_interrupt)
 
     while True:
         # test the user on a random function from the list
         # TODO: teach the player & increase difficulty over time
         function = random.choice(functions)
 
-        disassembled_correctly = test_user(function)
+        try:
+            disassembled_correctly = test_user(function)
+        except (KeyboardInterrupt, EOFError) as exc:
+            if isinstance(exc, EOFError):
+                # TODO: use ^D to show correct disassembly
+                pass
+            else:
+                # TODO: perhaps remove the ^C from terminal?
+                pass
+            break
+        except:
+            raise
 
         if disassembled_correctly:
             correct += 1
         else:
             incorrect += 1
+
+    print('\n\nThanks for playing! :)\n\nResults\n-------')
+    printc(f'Correct: {correct}', Ansi.LGREEN)
+    printc(f'Incorrect: {incorrect}', Ansi.LRED)
+
+
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
