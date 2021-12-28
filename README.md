@@ -3,17 +3,17 @@
 A simple command-line game to learn python's opcodes, and order of execution.
 
 # How to play
-Write a function in `guessthedis/test_functions.py`, and apply the `@test_func` decorator to it.\
+Write a function in `guessthedis/test_functions.py`, and apply the `@test` decorator to it.\
 (There are also some commented-out, sample functions you can try)
 ```py
-@test_func
+@test
 def f(x: int, y: int) -> str:
     x *= 2
     z = 'abc'
     return z * x ** y
 ```
 Run the program.
-It will pick a function marked with `@test_func`, and prompt you
+It will pick a function marked with `@test`, and prompt you
 to write the disassembly (instructions & data).
 ```py
 $ ./main.py

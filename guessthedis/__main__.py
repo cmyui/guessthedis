@@ -10,53 +10,86 @@ __email__ = "cmyuiosu@gmail.com"
 import dis
 import inspect
 import random
+from enum import IntEnum
 from typing import Callable
 
-from cmyui.logging import Ansi
-from cmyui.logging import printc
-
 from . import test_functions
+from functools import cache
+
+
+class Ansi(IntEnum):
+    # Default colours
+    BLACK = 30
+    RED = 31
+    GREEN = 32
+    YELLOW = 33
+    BLUE = 34
+    MAGENTA = 35
+    CYAN = 36
+    WHITE = 37
+
+    # Light colours
+    GRAY = 90
+    LRED = 91
+    LGREEN = 92
+    LYELLOW = 93
+    LBLUE = 94
+    LMAGENTA = 95
+    LCYAN = 96
+    LWHITE = 97
+
+    RESET = 0
+
+    @cache
+    def __repr__(self) -> str:
+        return f"\x1b[{self.value}m"
+
+
+def printc(string: str, col: Ansi) -> None:
+    """Print out a given string, with a colour."""
+    print(f"{col!r}{string}\x1b[0m")
 
 
 def test_user(f: Callable[..., object]) -> bool:
     """Test the user on a single function.
-       Returns 1 for correct, -1 for incorrect."""
+    Returns 1 for correct, -1 for incorrect."""
     # get instructions, and print source
     instructions = [*dis.get_instructions(f)]
 
-    # ignore first line (it's the @test_func decorator)
+    # ignore first line (it's the @test decorator)
     lines, _ = inspect.getsourcelines(f)
-    printc(''.join(lines[1:]), Ansi.LBLUE)
+    printc("".join(lines[1:]), Ansi.LBLUE)
 
-    print('Write the disassembly below (line by line).')
+    print("Write the disassembly below (line by line).")
 
     for idx, inst in enumerate(instructions):
-        uinput = input(f'{idx * 2}: ').lower().split(' ')
+        uinput = input(f"{idx * 2}: ").lower().split(" ")
         if uinput[0] != inst.opname.lower():
-            printc(f'Incorrect opname - {inst.opname}\n', Ansi.LRED)
+            printc(f"Incorrect opname - {inst.opname}\n", Ansi.LRED)
             return False
 
         # if opcode takes args, check them
         if inst.opcode >= dis.HAVE_ARGUMENT:
-            if inst.opcode == dis.opmap['FOR_ITER']:
+            if inst.opcode == dis.opmap["FOR_ITER"]:
                 # for this, the argument is the offset for
                 # the end of the loop, this is pretty hard
                 # to figure out, so i'll allow mistakes for now.
                 continue
 
             if len(uinput) != 2:
-                printc('Must provide argval!\n', Ansi.LRED)
+                printc("Must provide argval!\n", Ansi.LRED)
                 return False
             if str(inst.argval).lower() != uinput[1]:
-                printc(f'Incorrect argval - {inst.argval}\n', Ansi.LRED)
+                printc(f"Incorrect argval - {inst.argval}\n", Ansi.LRED)
                 return False
 
-    printc('Correct!\n', Ansi.LGREEN)
+    printc("Correct!\n", Ansi.LGREEN)
     return True
+
 
 def main() -> int:
     if not test_functions.functions:
-        printc("No functions marked with @test_func", Ansi.LRED)
+        printc("No functions marked with @test", Ansi.LRED)
         return 1
 
     correct = incorrect = 0
@@ -84,13 +117,12 @@ def main() -> int:
         else:
             incorrect += 1
 
-    print('\n\nThanks for playing! :)\n\nResults\n-------')
-    printc(f'Correct: {correct}', Ansi.LGREEN)
-    printc(f'Incorrect: {incorrect}', Ansi.LRED)
-
+    print("\n\nThanks for playing! :)\n\nResults\n-------")
+    printc(f"Correct: {correct}", Ansi.LGREEN)
+    printc(f"Incorrect: {incorrect}", Ansi.LRED)
 
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     raise SystemExit(main())
