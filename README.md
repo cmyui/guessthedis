@@ -51,7 +51,7 @@ $
 # Documentation & Debugging
 You'll definitely want to be familiar with python's [dis module](https://docs.python.org/3/library/dis.html) for debugging.
 
-1. It has a comprehensive [documentation of each bytecode instruction](docs.python.org/3/library/dis.html#python-bytecode-instructions).
+1. It has a comprehensive [documentation of each bytecode instruction](https://docs.python.org/3/library/dis.html#python-bytecode-instructions).
 2. You can use it to check the correct answers:
 ```py
 $ python
