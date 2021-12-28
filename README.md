@@ -3,21 +3,84 @@
 A simple command-line game to learn python's opcodes, and order of execution.
 
 # How to play
-1. Write a function, and apply the `@test_func` decorator to it.\
-![image](https://user-images.githubusercontent.com/17343631/147539227-c7ab10d9-bb32-4839-b76c-4bb15a1a76df.png)
+Write a function, and apply the `@test_func` decorator to it.\
+(There are also some commented-out, sample functions you can try)
+```py
+@test_func
+def f(x: int, y: int) -> str:
+    x *= 2
+    z = 'abc'
+    return z * x ** y
+```
+Run the program.
+It will pick a function marked with `@test_func`, and prompt you
+to write the disassembly (instructions & data).
+```py
+$ ./main.py
+def f(x: int, y: int) -> str:
+    x *= 2
+    z = 'abc'
+    return z * x ** y
 
-2. Run the program, and write the disassembly, instruction by instructions; both opcode, and data.\
-![image](https://user-images.githubusercontent.com/17343631/147539304-1ccbe624-de7d-4f6e-a4c3-233682a66c52.png)
+Write the disassembly below (line by line):
+0: load_fast x
+2: load_const 2
+4: inplace_multiply
+6: store_fast x
+8: load_const abc
+10: store_fast z
+12: load_fast z
+14: load_fast x
+16: load_fast y
+18: binary_power
+20: binary_multiply
+22: return_value
+Correct!
+```
+When you exit the game (e.g. with `^C`), your total score will be shown.
+```
+Thanks for playing! :)
 
-3. When you exit the game (e.g. with `^C`), your total score will be shown.\
-![image](https://user-images.githubusercontent.com/17343631/147539429-0fc01f61-e69e-4882-ba66-3ffb562becf6.png)
+Results
+-------
+Correct: 6
+Incorrect: 5
+$
+```
 
 # Documentation & Debugging
 You'll definitely want to be familiar with python's [dis module](https://docs.python.org/3/library/dis.html) for debugging.
 
 1. It has a comprehensive [documentation of each of the various bytecode instructions](docs.python.org/3/library/dis.html#python-bytecode-instructions).
-2. You can use it to check the correct answers:\
-![image](https://user-images.githubusercontent.com/17343631/147539745-2fa4a088-1811-4e7e-a5a4-c6b1938ac95a.png)
+2. You can use it to check the correct answers:
+```py
+$ python
+Python 3.9.9+ (main, Nov 19 2021, 08:51:58)
+[GCC 7.5.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> def f(x: int, y: int) -> str:
+...     x *= 2
+...     z = 'abc'
+...     return z * x ** y
+...
+>>> import dis
+>>> dis.dis(f)
+  2           0 LOAD_FAST                0 (x)
+              2 LOAD_CONST               1 (2)
+              4 INPLACE_MULTIPLY
+              6 STORE_FAST               0 (x)
+
+  3           8 LOAD_CONST               2 ('abc')
+             10 STORE_FAST               2 (z)
+
+  4          12 LOAD_FAST                2 (z)
+             14 LOAD_FAST                0 (x)
+             16 LOAD_FAST                1 (y)
+             18 BINARY_POWER
+             20 BINARY_MULTIPLY
+             22 RETURN_VALUE
+>>>
+```
 
 # Help wanted!
 This idea is currently simple, but I think it could certainly be built on.
