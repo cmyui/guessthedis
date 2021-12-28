@@ -3,7 +3,7 @@
 A simple command-line game to learn python's opcodes, and order of execution.
 
 # How to play
-Write a function, and apply the `@test_func` decorator to it.\
+Write a function in `guessthedis/test_functions.py`, and apply the `@test_func` decorator to it.\
 (There are also some commented-out, sample functions you can try)
 ```py
 @test_func
@@ -51,7 +51,7 @@ $
 # Documentation & Debugging
 You'll definitely want to be familiar with python's [dis module](https://docs.python.org/3/library/dis.html) for debugging.
 
-1. It has a comprehensive [documentation of each of the various bytecode instructions](docs.python.org/3/library/dis.html#python-bytecode-instructions).
+1. It has a comprehensive [documentation of each bytecode instruction](docs.python.org/3/library/dis.html#python-bytecode-instructions).
 2. You can use it to check the correct answers:
 ```py
 $ python
