@@ -13,57 +13,52 @@ def test_func(f: Callable[..., object]) -> Callable[..., object]:
     functions.append(f)
     return f
 
-# TODO: some sort of function auto-generator using ast?
-# not sure how possible that is, but it would sure be neat.
+# TODO: a function factory which just randomizes use
+#       of some basic operators to create a test?
 
-@test_func
-def f(x) -> None:
-    len(x) % 2 == 0
+
+""" Examples; feel free to use these! """
 
 @test_func
 def f(x: float) -> float:
     return x * x
 
-@test_func
-def f(x: float, y: float) -> float:
-    return x / y
+# @test_func
+# def f(x: str) -> str:
+#     return x.upper()
 
-@test_func
-def f(x: str) -> str:
-    return x.upper()
+# @test_func
+# def f(x: int, y: int) -> str:
+#     x *= 2
+#     z = 'abc'
+#     return z * x ** y
 
-@test_func
-def f(x: int, y: int) -> str:
-    x *= 2
-    z = 'abc'
-    return z * x ** y
+# @test_func
+# def f(x: int) -> str:
+#     y = 3 ^ x
+#     z = 4 * ~y
+#     s = 'miniature' * y ** len('lamp')
+#     return s[:z] * 5
 
-@test_func
-def f() -> list[int]:
-    return [x ** 2 for x in range(16)]
+# @test_func
+# def f() -> list[int]:
+#     l = []
+#     for i in range(16):
+#         l.append(~i & 4)
+#     return l
 
-@test_func
-def f() -> list[int]:
-    l = []
-    for i in range(16):
-        l.append(~i & 4)
-    return l
+# @test_func
+# def f() -> list[int]:
+#     return [x ** 2 for x in range(16)]
 
-@test_func
-def f(x: int, y: str) -> tuple[int]:
-    l = [*map(ord,y)]
-    for i in range(max(len(y), abs(x ** ~len(y)))):
-        l[i] ^= ord(l[i]) * 2
+# @test_func
+# def f(x: int, y: str) -> tuple[int]:
+#     l = [*map(ord,y)]
+#     for i in range(max(len(y), abs(x ** ~len(y)))):
+#         l[i] ^= ord(l[i]) * 2
 
-    del i
-    return tuple(l)
-
-@test_func
-def f(x: int) -> str:
-    y = 3 ^ x
-    z = 4 * ~y
-    s = 'miniature' * y ** len('lamp')
-    return s[:z] * 5
+#     del i
+#     return tuple(l)
 
 def test_user(f: Callable[..., object]) -> bool:
     """Test the user on a single function.
