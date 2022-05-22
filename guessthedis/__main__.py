@@ -117,6 +117,7 @@ def test_user(disassembly_target: Callable[..., Any]) -> bool:
 
                 # we'll show the disassembly "cheatsheet" in gnu's less interface
                 # to do this, we'll need to write the contents to a temporary file
+                # TODO: how common is the less command? should i have a fallback?
                 with tempfile.NamedTemporaryFile("w") as f:
                     # always write opcode reference documentation at the top of output
                     f.write(
