@@ -5,8 +5,12 @@ the repo @ https://github.com/cmyui/guessthedis
 """
 from __future__ import annotations
 
+import contextlib
 import dis
 import inspect
+import signal
+import subprocess
+import tempfile
 import textwrap
 from enum import IntEnum
 from typing import Callable
@@ -44,16 +48,26 @@ class Ansi(IntEnum):
         return f"\x1b[{self.value}m"
 
 
+@contextlib.contextmanager
+def ignore_sigint():
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    try:
+        yield
+    finally:
+        signal.signal(signal.SIGINT, signal.default_int_handler)
+
+
 def printc(string: str, col: Ansi) -> None:
     """Print out a given string, with a colour."""
     print(f"{col!r}{string}\x1b[m")
 
 
-def test_user(f: Callable[..., object]) -> bool:
+# TODO: more generic type for disassembly_target?
+def test_user(disassembly_target: Callable[..., object]) -> bool:
     """Test the user on a single function.
     Returns 1 for correct, -1 for incorrect."""
     ## print the source code of the function for the user
-    source_lines, _ = inspect.getsourcelines(f)
+    source_lines, _ = inspect.getsourcelines(disassembly_target)
 
     # (remove decorators from output)
     start_line = 0
@@ -66,27 +80,55 @@ def test_user(f: Callable[..., object]) -> bool:
     ## prompt the user to disassemble the function
     print("Write the disassembly below (line by line).")
 
+    # TODO: make a higher level version of this where i can disassemble
+    # the constants within the function i am disassembling, so that we
+    # can define things like functions and classes within them
+    instruction_iterator = dis.get_instructions(disassembly_target)
+
     # quiz them on each operation
-    for idx, inst in enumerate(dis.get_instructions(f)):
-        uinput = input(f"{idx * 2}: ").lower().split(" ")
-        if uinput[0] != inst.opname.lower():
-            printc(f"Incorrect opname - {inst.opname}\n", Ansi.LRED)
+    for idx, instruction in enumerate(instruction_iterator):
+        while True:
+            try:
+                user_input_raw = input(f"{idx * 2}: ").strip().lower()
+            except EOFError:
+                # NOTE: ^D can be used to show the correct disassembly
+                print("\x1b[2K", end="\r")  # clear current line
+
+                # we'll show the disassembly "cheatsheet" in gnu's less interface
+                # to do this, we'll need to write the contents to a temporary file
+                with tempfile.NamedTemporaryFile("w") as f:
+                    # write the disassembly contents to the file
+                    dis.dis(disassembly_target, file=f)
+                    f.flush()
+
+                    # open the file in the less interface
+                    with ignore_sigint():
+                        subprocess.run(["less", f.name])
+            else:
+                if user_input_raw:
+                    user_input = user_input_raw.split()
+                    break
+                else:
+                    print("Invalid input, please try again")
+
+        if user_input[0] != instruction.opname.lower():
+            printc(f"Incorrect opname - {instruction.opname}\n", Ansi.LRED)
             return False
 
         # if opcode takes args, check them
-        if inst.opcode >= dis.HAVE_ARGUMENT:
-            if inst.opcode == dis.opmap["FOR_ITER"]:
+        if instruction.opcode >= dis.HAVE_ARGUMENT:
+            if instruction.opcode == dis.opmap["FOR_ITER"]:
                 # for this, the argument is the offset for
                 # the end of the loop, this is pretty hard
                 # to figure out, so i'll allow mistakes for now.
                 continue
 
-            if len(uinput) != 2:
+            if len(user_input) != 2:
                 printc("Must provide argval!\n", Ansi.LRED)
                 return False
 
-            if str(inst.argval).lower() != uinput[1]:
-                printc(f"Incorrect argval - {inst.argval}\n", Ansi.LRED)
+            if str(instruction.argval).lower() != user_input[1]:
+                printc(f"Incorrect argval - {instruction.argval}\n", Ansi.LRED)
                 return False
 
     printc("Correct!\n", Ansi.LGREEN)
@@ -108,25 +150,9 @@ def main() -> int:
         try:
             disassembled_correctly = test_user(function)
         except KeyboardInterrupt:
-            # NOTE: ^C can be used to quit out of the game
+            # NOTE: ^C can be used to exit the game early
             print("\x1b[2K", end="\r")  # clear current line
             break
-        except EOFError:
-            # NOTE: ^D can be used to show the correct disassembly
-            print("\x1b[2K", end="\r")  # clear current line
-            print()  # \n
-            printc("Correct disassembly", Ansi.LMAGENTA)
-            dis.dis(function)
-            print()  # \n
-
-            try:
-                input("Press enter to continue...")
-            except (KeyboardInterrupt, EOFError):
-                # treat ^C and ^D the same as enter
-                pass
-
-            print()  # \n
-            continue  # don't count towards score
 
         if disassembled_correctly:
             correct += 1
