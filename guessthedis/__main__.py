@@ -99,8 +99,18 @@ def test_user(disassembly_target: Callable[..., object]) -> bool:
                 # we'll show the disassembly "cheatsheet" in gnu's less interface
                 # to do this, we'll need to write the contents to a temporary file
                 with tempfile.NamedTemporaryFile("w") as f:
+                    # always write opcode reference documentation at the top of output
+                    f.write(
+                        "python3 opcode reference\n"
+                        "------------------------\n"
+                        "- https://docs.python.org/3/library/dis.html#python-bytecode-instructions"
+                        "\n\n"
+                    )
+
                     # write the disassembly contents to the file
                     dis.dis(disassembly_target, file=f)
+
+                    # make sure all contents have been flushed to disk
                     f.flush()
 
                     # open the file in the less interface
