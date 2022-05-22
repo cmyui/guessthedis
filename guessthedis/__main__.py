@@ -14,6 +14,7 @@ import tempfile
 import textwrap
 from enum import IntEnum
 from typing import Callable
+from typing import Iterator
 
 from . import test_functions
 
@@ -49,10 +50,10 @@ class Ansi(IntEnum):
 
 
 @contextlib.contextmanager
-def ignore_sigint():
+def ignore_sigint() -> Iterator[None]:
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     try:
-        yield
+        yield None
     finally:
         signal.signal(signal.SIGINT, signal.default_int_handler)
 
@@ -87,6 +88,7 @@ def test_user(disassembly_target: Callable[..., object]) -> bool:
 
     # quiz them on each operation
     for idx, instruction in enumerate(instruction_iterator):
+        # loop indefinitely to get valid user input
         while True:
             try:
                 user_input_raw = input(f"{idx * 2}: ").strip().lower()
@@ -104,32 +106,37 @@ def test_user(disassembly_target: Callable[..., object]) -> bool:
                     # open the file in the less interface
                     with ignore_sigint():
                         subprocess.run(["less", f.name])
-            else:
-                if user_input_raw:
-                    user_input = user_input_raw.split()
-                    break
-                else:
-                    print("Invalid input, please try again")
 
-        if user_input[0] != instruction.opname.lower():
-            printc(f"Incorrect opname - {instruction.opname}\n", Ansi.LRED)
-            return False
+                continue
 
-        # if opcode takes args, check them
-        if instruction.opcode >= dis.HAVE_ARGUMENT:
-            if instruction.opcode == dis.opmap["FOR_ITER"]:
+            if not user_input_raw:
+                print("Invalid input, please try again")
+                continue
+
+            # user has provided some input - check if it's correct
+            user_input = user_input_raw.split()
+
+            # validate operation code name
+            if user_input[0] != instruction.opname.lower():
+                printc(f"Incorrect opcode value: {user_input[0]}\n", Ansi.LRED)
+                continue
+
+            # if this opcode expects arguments,
+            # parse them from user input & validate
+            if (
+                instruction.opcode >= dis.HAVE_ARGUMENT
                 # for this, the argument is the offset for
                 # the end of the loop, this is pretty hard
                 # to figure out, so i'll allow mistakes for now.
-                continue
+                and instruction.opcode != dis.opmap["FOR_ITER"]
+            ):
+                if len(user_input) != 2:
+                    printc("This opcode expects an argument.\n", Ansi.LRED)
+                    continue
 
-            if len(user_input) != 2:
-                printc("Must provide argval!\n", Ansi.LRED)
-                return False
-
-            if str(instruction.argval).lower() != user_input[1]:
-                printc(f"Incorrect argval - {instruction.argval}\n", Ansi.LRED)
-                return False
+                if str(instruction.argval).lower() != user_input[1]:
+                    printc(f"Incorrect argument value: {user_input[1]}\n", Ansi.LRED)
+                    continue
 
     printc("Correct!\n", Ansi.LGREEN)
     return True
