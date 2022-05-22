@@ -27,6 +27,36 @@ def no_op() -> None:
 
 
 @register
+def unary_op() -> int:
+    x = 5
+    return -x
+
+
+@register
+def binary_op() -> int:
+    return 5 * 5
+
+
+@register
+def function_call() -> list[str]:
+    return dir()
+
+
+@register
+def method_call() -> str:
+    return "abc".upper()
+
+
+@register
+def if_else() -> int:
+    x = True
+    if x:
+        return 1
+    else:
+        return 0
+
+
+@register
 def store_primitive_types_fast() -> None:
     i = 5
     f = 3.14
@@ -40,35 +70,6 @@ def store_collection_types_fast() -> None:
     s = {1, 2, 3}
     d = {"a": 1, "b": 2, "c": 3}
     r = range(10)
-
-
-@register
-def unary_op() -> None:
-    x = -5
-
-
-@register
-def binary_op() -> None:
-    x = 5 * 5
-
-
-@register
-def function_call() -> None:
-    x = dir()
-
-
-@register
-def method_call() -> None:
-    x = "abc".upper()
-
-
-@register
-def if_else() -> int:
-    x = True
-    if x:
-        return 1
-    else:
-        return 0
 
 
 @register
