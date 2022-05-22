@@ -3,18 +3,18 @@
 For an in-detail explanation, please visit
 the repo @ https://github.com/cmyui/guessthedis
 """
-
-__author__ = "Joshua Smith (cmyui)"
-__email__ = "cmyuiosu@gmail.com"
+from __future__ import annotations
 
 import dis
 import inspect
-import random
+import textwrap
 from enum import IntEnum
 from typing import Callable
 
 from . import test_functions
-from functools import cache
+
+__author__ = "Joshua Smith (cmyui)"
+__email__ = "cmyuiosu@gmail.com"
 
 
 class Ansi(IntEnum):
@@ -40,29 +40,34 @@ class Ansi(IntEnum):
 
     RESET = 0
 
-    @cache
     def __repr__(self) -> str:
         return f"\x1b[{self.value}m"
 
 
 def printc(string: str, col: Ansi) -> None:
     """Print out a given string, with a colour."""
-    print(f"{col!r}{string}\x1b[0m")
+    print(f"{col!r}{string}\x1b[m")
 
 
 def test_user(f: Callable[..., object]) -> bool:
     """Test the user on a single function.
     Returns 1 for correct, -1 for incorrect."""
-    # get instructions, and print source
-    instructions = [*dis.get_instructions(f)]
+    ## print the source code of the function for the user
+    source_lines, _ = inspect.getsourcelines(f)
 
-    # ignore first line (it's the @test decorator)
-    lines, _ = inspect.getsourcelines(f)
-    printc("".join(lines[1:]), Ansi.LBLUE)
+    # (remove decorators from output)
+    start_line = 0
+    while source_lines[start_line].lstrip().startswith("@"):
+        start_line += 1
 
+    source_code = "".join(source_lines[start_line:])
+    printc(textwrap.dedent(source_code), Ansi.LBLUE)
+
+    ## prompt the user to disassemble the function
     print("Write the disassembly below (line by line).")
 
-    for idx, inst in enumerate(instructions):
+    # quiz them on each operation
+    for idx, inst in enumerate(dis.get_instructions(f)):
         uinput = input(f"{idx * 2}: ").lower().split(" ")
         if uinput[0] != inst.opname.lower():
             printc(f"Incorrect opname - {inst.opname}\n", Ansi.LRED)
@@ -79,6 +84,7 @@ def test_user(f: Callable[..., object]) -> bool:
             if len(uinput) != 2:
                 printc("Must provide argval!\n", Ansi.LRED)
                 return False
+
             if str(inst.argval).lower() != uinput[1]:
                 printc(f"Incorrect argval - {inst.argval}\n", Ansi.LRED)
                 return False
@@ -92,32 +98,43 @@ def main() -> int:
         printc("No functions marked with @test", Ansi.LRED)
         return 1
 
+    # use gnu readline interface
+    # https://docs.python.org/3/library/readline.html
+    import readline
+
     correct = incorrect = 0
 
-    while True:
-        # test the user on a random function from the list
-        # TODO: teach the player & increase difficulty over time
-        function = random.choice(test_functions.functions)
-
+    for function in test_functions.functions:
         try:
             disassembled_correctly = test_user(function)
-        except (KeyboardInterrupt, EOFError) as exc:
-            if isinstance(exc, EOFError):
-                # TODO: use ^D to show correct disassembly
-                pass
-            else:
-                # TODO: perhaps remove the ^C from terminal?
-                pass
+        except KeyboardInterrupt:
+            # NOTE: ^C can be used to quit out of the game
+            print("\x1b[2K", end="\r")  # clear current line
             break
-        except:
-            raise
+        except EOFError:
+            # NOTE: ^D can be used to show the correct disassembly
+            print("\x1b[2K", end="\r")  # clear current line
+            print()  # \n
+            printc("Correct disassembly", Ansi.LMAGENTA)
+            dis.dis(function)
+            print()  # \n
+
+            try:
+                input("Press enter to continue...")
+            except (KeyboardInterrupt, EOFError):
+                # treat ^C and ^D the same as enter
+                pass
+
+            print()  # \n
+            continue  # don't count towards score
 
         if disassembled_correctly:
             correct += 1
         else:
             incorrect += 1
 
-    print("\n\nThanks for playing! :)\n\nResults\n-------")
+    print()  # \n
+    print("Thanks for playing! :)\n\nResults\n-------")
     printc(f"Correct: {correct}", Ansi.LGREEN)
     printc(f"Incorrect: {incorrect}", Ansi.LRED)
 
