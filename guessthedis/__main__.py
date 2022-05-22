@@ -148,6 +148,9 @@ def test_user(disassembly_target: Callable[..., object]) -> bool:
                     printc(f"Incorrect argument value: {user_input[1]}\n", Ansi.LRED)
                     continue
 
+            # user input is all correct
+            break
+
     printc("Correct!\n", Ansi.LGREEN)
     return True
 
