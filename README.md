@@ -1,6 +1,7 @@
 # guessthedis - gameify learning python disassembly
 
-A simple command-line game to learn python's opcodes, and order of execution.
+A command-line game to test & grow your python bytecode disassembly knowledge.
+
 
 # How to play
 Write a function in `guessthedis/test_functions.py`, and apply the `@test` decorator to it.\
