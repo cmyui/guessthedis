@@ -13,8 +13,12 @@ import subprocess
 import tempfile
 import textwrap
 from enum import IntEnum
+from typing import Any
 from typing import Callable
 from typing import Iterator
+
+from rich.console import Console
+from rich.syntax import Syntax
 
 from . import test_functions
 
@@ -63,11 +67,8 @@ def printc(string: str, col: Ansi) -> None:
     print(f"{col!r}{string}\x1b[m")
 
 
-# TODO: more generic type for disassembly_target?
-def test_user(disassembly_target: Callable[..., object]) -> bool:
-    """Test the user on a single function.
-    Returns 1 for correct, -1 for incorrect."""
-    ## print the source code of the function for the user
+def get_source_code_lines(disassembly_target: Callable[..., Any]) -> list[str]:
+    """Get the source code of a function."""
     source_lines, _ = inspect.getsourcelines(disassembly_target)
 
     # (remove decorators from output)
@@ -75,8 +76,26 @@ def test_user(disassembly_target: Callable[..., object]) -> bool:
     while source_lines[start_line].lstrip().startswith("@"):
         start_line += 1
 
-    source_code = "".join(source_lines[start_line:])
-    printc(textwrap.dedent(source_code), Ansi.LBLUE)
+    return textwrap.dedent("".join(source_lines[start_line:])).split("\n")
+
+
+# TODO: more generic type for disassembly_target?
+def test_user(disassembly_target: Callable[..., Any]) -> bool:
+    """Test the user on a single function.
+    Returns 1 for correct, -1 for incorrect."""
+    ## print the source code of the function for the user
+    source_code_lines = get_source_code_lines(disassembly_target)
+    max_len_line = max(len(line) for line in source_code_lines)
+
+    print("Given the following function:")
+    syntax = Syntax(
+        "\n".join(source_code_lines),
+        "python",
+        # theme=style,
+        line_numbers=True,
+        code_width=max_len_line + 1,
+    )
+    Console().print(syntax)  # TODO: can i create this once and reuse?
 
     ## prompt the user to disassemble the function
     print("Write the disassembly below (line by line).")
@@ -93,7 +112,7 @@ def test_user(disassembly_target: Callable[..., object]) -> bool:
             try:
                 user_input_raw = input(f"{idx * 2}: ").strip().lower()
             except EOFError:
-                # NOTE: ^D can be used to show the correct disassembly
+                # NOTE: ^D can be used to show the correct disassembly "cheatsheet"
                 print("\x1b[2K", end="\r")  # clear current line
 
                 # we'll show the disassembly "cheatsheet" in gnu's less interface
@@ -104,7 +123,7 @@ def test_user(disassembly_target: Callable[..., object]) -> bool:
                         "python3 opcode reference\n"
                         "------------------------\n"
                         "- https://docs.python.org/3/library/dis.html#python-bytecode-instructions"
-                        "\n\n"
+                        "\n\n",
                     )
 
                     # write the disassembly contents to the file
