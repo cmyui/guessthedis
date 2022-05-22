@@ -5,6 +5,7 @@ the repo @ https://github.com/cmyui/guessthedis
 """
 from __future__ import annotations
 
+import ast
 import contextlib
 import dis
 import inspect
@@ -62,9 +63,9 @@ def ignore_sigint() -> Iterator[None]:
         signal.signal(signal.SIGINT, signal.default_int_handler)
 
 
-def printc(string: str, col: Ansi) -> None:
+def printc(string: str, col: Ansi, end="\n") -> None:
     """Print out a given string, with a colour."""
-    print(f"{col!r}{string}\x1b[m")
+    print(f"{col!r}{string}\x1b[m", end=end)
 
 
 def get_source_code_lines(disassembly_target: Callable[..., Any]) -> list[str]:
@@ -89,16 +90,16 @@ def test_user(disassembly_target: Callable[..., Any]) -> bool:
 
     print("Given the following function:")
     syntax = Syntax(
-        "\n".join(source_code_lines),
-        "python",
-        # theme=style,
+        code="\n".join(source_code_lines),
+        lexer_name="python",
+        theme="monokai",  # TODO: customization?
         line_numbers=True,
         code_width=max_len_line + 1,
     )
     Console().print(syntax)  # TODO: can i create this once and reuse?
 
     ## prompt the user to disassemble the function
-    print("Write the disassembly below (line by line).")
+    print("Write the disassembly below (line by line):")
 
     # TODO: make a higher level version of this where i can disassemble
     # the constants within the function i am disassembling, so that we
@@ -110,7 +111,7 @@ def test_user(disassembly_target: Callable[..., Any]) -> bool:
         # loop indefinitely to get valid user input
         while True:
             try:
-                user_input_raw = input(f"{idx * 2}: ").strip().lower()
+                user_input_raw = input(f"{idx * 2}: ").strip()
             except EOFError:
                 # NOTE: ^D can be used to show the correct disassembly "cheatsheet"
                 print("\x1b[2K", end="\r")  # clear current line
@@ -140,15 +141,16 @@ def test_user(disassembly_target: Callable[..., Any]) -> bool:
                 continue
 
             if not user_input_raw:
-                print("Invalid input, please try again")
+                printc("Invalid input, please try again", Ansi.LRED)
                 continue
 
             # user has provided some input - check if it's correct
-            user_input = user_input_raw.split()
+            user_input_opcode, *user_input_args = user_input_raw.split()
+            user_input_opcode = user_input_opcode.lower()
 
             # validate operation code name
-            if user_input[0] != instruction.opname.lower():
-                printc(f"Incorrect opcode value: {user_input[0]}\n", Ansi.LRED)
+            if user_input_opcode != instruction.opname.lower():
+                printc(f"Incorrect opcode value: {user_input_opcode}", Ansi.LRED)
                 continue
 
             # if this opcode expects arguments,
@@ -160,12 +162,47 @@ def test_user(disassembly_target: Callable[..., Any]) -> bool:
                 # to figure out, so i'll allow mistakes for now.
                 and instruction.opcode != dis.opmap["FOR_ITER"]
             ):
-                if len(user_input) != 2:
-                    printc("This opcode expects an argument.\n", Ansi.LRED)
+                if not user_input_args:
+                    printc("Missing argument(s), please try again", Ansi.LRED)
                     continue
 
-                if str(instruction.argval).lower() != user_input[1]:
-                    printc(f"Incorrect argument value: {user_input[1]}\n", Ansi.LRED)
+                # NOTE: no python instruction uses more than a single argument,
+                # so in reality we're only parsing a single argument here.
+                user_input_args_str = " ".join(user_input_args)
+                if isinstance(instruction.argval, str):
+                    # strings are easy - just forward it through
+                    user_input_arg = user_input_args_str
+                else:
+                    # argument type is something different - attempt a literal eval
+                    try:
+                        user_input_arg = ast.literal_eval(user_input_args_str)
+
+                        # NOTE: ast.literal_eval only supports strings, bytes,
+                        # numbers, tuples, lists, dicts, sets, booleans, and None
+                        if isinstance(instruction.argval, frozenset):
+                            user_input_arg = frozenset(user_input_arg)
+
+                        assert isinstance(user_input_arg, type(instruction.argval))
+                    except (
+                        AssertionError,
+                        # from ast.eval_literal
+                        ValueError,
+                        TypeError,
+                        SyntaxError,
+                        MemoryError,
+                        RecursionError,
+                    ) as exc:
+                        printc(
+                            f"Incorrect argument value: {user_input_args_str}",
+                            Ansi.LRED,
+                        )
+                        continue
+
+                if instruction.argval != user_input_arg:
+                    printc(
+                        f"Incorrect argument value: {user_input_args_str}",
+                        Ansi.LRED,
+                    )
                     continue
 
             # user input is all correct
