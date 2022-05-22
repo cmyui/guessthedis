@@ -6,12 +6,14 @@ There are some pre-added examples you can try out as well.
 """
 from __future__ import annotations
 
+from typing import Any
+from typing import Callable
 from typing import TypeVar
 
-T = TypeVar("T")
+T = TypeVar("T", bound=Callable[..., Any])
 
 
-def test(f: T) -> T:
+def register(f: T) -> T:
     functions.append(f)
     return f
 
@@ -19,50 +21,107 @@ def test(f: T) -> T:
 functions = []
 
 
-### TEST FUNCTIONS ###
-
-# TODO: a function factory which just randomizes use
-#       of some basic operators to create a test?
-
-
-@test
-def f(x: float) -> float:
-    return x * x
+@register
+def no_op() -> None:
+    pass
 
 
-# @test
-# def f(x: str) -> str:
-#     return x.upper()
+@register
+def store_primitive_types_fast() -> None:
+    i = 5
+    f = 3.14
+    b = True
 
-# @test
-# def f(x: int, y: int) -> str:
-#     x *= 2
-#     z = 'abc'
-#     return z * x ** y
 
-# @test
-# def f(x: int) -> str:
-#     y = 3 ^ x
-#     z = 4 * ~y
-#     s = 'miniature' * y ** len('lamp')
-#     return s[:z] * 5
+@register
+def store_collection_types_fast() -> None:
+    l = [1, 2, 3]
+    t = (1, 2, 3)
+    s = {1, 2, 3}
+    d = {"a": 1, "b": 2, "c": 3}
+    r = range(10)
 
-# @test
-# def f() -> list[int]:
-#     l = []
-#     for i in range(16):
-#         l.append(~i & 4)
-#     return l
 
-# @test
-# def f() -> list[int]:
-#     return [x ** 2 for x in range(16)]
+@register
+def unary_op() -> None:
+    x = -5
 
-# @test
-# def f(x: int, y: str) -> tuple[int]:
-#     l = [*map(ord,y)]
-#     for i in range(max(len(y), abs(x ** ~len(y)))):
-#         l[i] ^= ord(l[i]) * 2
 
-#     del i
-#     return tuple(l)
+@register
+def binary_op() -> None:
+    x = 5 * 5
+
+
+@register
+def function_call() -> None:
+    x = dir()
+
+
+@register
+def method_call() -> None:
+    x = "abc".upper()
+
+
+@register
+def if_else() -> int:
+    x = True
+    if x:
+        return 1
+    else:
+        return 0
+
+
+@register
+def binary_subscr(l: list[int]) -> int:
+    return l[0]
+
+
+@register
+def for_loop() -> int:
+    total = 0
+    for i in range(10):
+        total += i
+    return total
+
+
+@register
+def while_loop() -> int:
+    total = 0
+    while total < 10:
+        total += total
+    return total
+
+
+@register
+def list_comprehension() -> list[int]:
+    r = range(5)
+    l = [i * 2 for i in r]
+    return l
+
+
+@register
+def dict_comprehension() -> dict[int, int]:
+    r = range(5)
+    l = {i: i * 2 for i in r}
+    return l
+
+
+@register
+def raise_exception() -> None:
+    raise Exception("This is an exception")
+
+
+# TODO: add support for multiple disassembly definitions
+#       so we can do cool stuff like functions and classes
+
+# @register
+# def create_function() -> None:
+#     def f(x: int, y: int) -> int:
+#         return x + y
+
+
+# @register
+# def create_class() -> None:
+#     class Player:
+#         def __init__(self, name: str) -> None:
+#             self.name = name
