@@ -204,6 +204,10 @@ def test_user(disassembly_target: Callable[..., Any]) -> bool:
                         Ansi.LRED,
                     )
                     continue
+            else:
+                if user_input_args:
+                    printc("Provided argument(s) in invalid context, please try again", Ansi.LRED)
+                    continue
 
             # user input is all correct
             break
