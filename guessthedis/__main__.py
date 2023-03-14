@@ -91,7 +91,7 @@ def test_user(disassembly_target: Callable[..., Any]) -> bool:
     print("Given the following function:")
     syntax = Syntax(
         code="\n".join(source_code_lines),
-        lexer_name="python",
+        lexer="python",
         theme="monokai",  # TODO: customization?
         line_numbers=True,
         code_width=max_len_line + 1,
