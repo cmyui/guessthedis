@@ -6,24 +6,22 @@ There are some pre-added examples you can try out as well.
 """
 from __future__ import annotations
 
-from typing import Any
-from typing import Callable
-from typing import TypeVar
+from typing import Any, Callable, TypeVar
 
 T = TypeVar("T", bound=Callable[..., Any])
 
+functions: list[Callable[..., Any]] = []
 
 def register(f: T) -> T:
     functions.append(f)
     return f
 
 
-functions = []
-
-
-@register
-def no_op() -> None:
+def no_op_pass() -> None:
     pass
+
+
+def no_op_ellipsis() -> None: ...
 
 
 @register
