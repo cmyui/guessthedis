@@ -1,26 +1,30 @@
-""" Define functions to be used when testing.
+"""Define functions to be used when testing.
 
 Create, and mark a function with `@test` to enable it for selection.
 
 There are some pre-added examples you can try out as well.
 """
+
 from __future__ import annotations
 
 from typing import Any, Callable, TypeVar
 
 T = TypeVar("T", bound=Callable[..., Any])
 
-functions: list[Callable[..., Any]] = []
+functions: list[Callable[[], Any]] = []
+
 
 def register(f: T) -> T:
     functions.append(f)
     return f
 
 
+@register
 def no_op_pass() -> None:
     pass
 
 
+@register
 def no_op_ellipsis() -> None: ...
 
 

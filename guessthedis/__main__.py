@@ -1,8 +1,9 @@
-""" guessthedis - gameify learning python disassembly
+"""guessthedis - gameify learning python disassembly
 
 For an in-detail explanation, please visit
 the repo @ https://github.com/cmyui/guessthedis
 """
+
 from __future__ import annotations
 
 import ast
@@ -25,6 +26,20 @@ from . import test_functions
 
 __author__ = "Joshua Smith (cmyui)"
 __email__ = "cmyuiosu@gmail.com"
+
+# These opcodes require a line number argument, which is not realistically
+# possible to input by the user, so we'll allow some grace for these.
+OPCODES_WITH_LINE_NUMBER_ARGUMENT = frozenset(
+    {
+        dis.opmap["FOR_ITER"],
+        dis.opmap["JUMP_ABSOLUTE"],
+        dis.opmap["JUMP_FORWARD"],
+        dis.opmap["JUMP_IF_FALSE_OR_POP"],
+        dis.opmap["JUMP_IF_TRUE_OR_POP"],
+        dis.opmap["JUMP_IF_NOT_EXC_MATCH"],
+        dis.opmap["JUMP_IF_NOT_NONE"],
+    }
+)
 
 
 class Ansi(IntEnum):
@@ -160,7 +175,7 @@ def test_user(disassembly_target: Callable[..., Any]) -> bool:
                 # for this, the argument is the offset for
                 # the end of the loop, this is pretty hard
                 # to figure out, so i'll allow mistakes for now.
-                and instruction.opcode != dis.opmap["FOR_ITER"]
+                and instruction.opcode not in OPCODES_WITH_LINE_NUMBER_ARGUMENT
             ):
                 if not user_input_args:
                     printc("Missing argument(s), please try again", Ansi.LRED)
@@ -191,7 +206,7 @@ def test_user(disassembly_target: Callable[..., Any]) -> bool:
                         SyntaxError,
                         MemoryError,
                         RecursionError,
-                    ) as exc:
+                    ):
                         printc(
                             f"Incorrect argument value: {user_input_args_str}",
                             Ansi.LRED,
@@ -206,7 +221,10 @@ def test_user(disassembly_target: Callable[..., Any]) -> bool:
                     continue
             else:
                 if user_input_args:
-                    printc("Provided argument(s) in invalid context, please try again", Ansi.LRED)
+                    printc(
+                        "Provided argument(s) in invalid context, please try again",
+                        Ansi.LRED,
+                    )
                     continue
 
             # user input is all correct
