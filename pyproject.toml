@@ -1,3 +1,13 @@
+[project]
+name = "guessthedis"
+version = "1.0.0"
+description = "Gameify learning python disassembly"
+requires-python = ">=3.10"
+dependencies = ["rich>=12.0"]
+
+[dependency-groups]
+dev = ["pytest>=7.0"]
+
 [tool.ruff]
 target-version = "py310"
 
@@ -14,3 +24,6 @@ force-single-line = true
 [tool.ruff.lint.per-file-ignores]
 "guessthedis/test_functions.py" = ["F841"]  # unused variables are intentional bytecode exercises
 "guessthedis/__init__.py" = ["F401"]  # re-export
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
