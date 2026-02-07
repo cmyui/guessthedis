@@ -11,6 +11,7 @@ import inspect
 import subprocess
 import tempfile
 import textwrap
+import time
 import types
 from typing import Any
 from typing import Callable
@@ -18,6 +19,7 @@ from typing import Callable
 from rich.console import Console
 from rich.syntax import Syntax
 
+from . import state as state_mod
 from . import test_functions
 from .terminal import Ansi
 from .terminal import NavigationRequested
@@ -201,8 +203,8 @@ def test_user(
     disassembly_target: Callable[..., Any],
     *,
     console: Console,
-) -> bool:
-    """Test the user on a single function."""
+) -> float:
+    """Test the user on a single function. Returns elapsed seconds."""
     source_code_lines = get_source_code_lines(disassembly_target)
     max_len_line = max(len(line) for line in source_code_lines)
 
@@ -217,10 +219,12 @@ def test_user(
     console.print(syntax)
 
     print("Write the disassembly below (line by line):")
+    start = time.monotonic()
     _quiz_instructions(disassembly_target)
+    elapsed = time.monotonic() - start
 
-    printc("Correct!\n", Ansi.LGREEN)
-    return True
+    printc("Correct!", Ansi.LGREEN)
+    return elapsed
 
 
 DIFFICULTY_CHOICES = [
@@ -267,23 +271,59 @@ def main() -> int:
         printc("No functions matched the given difficulty", Ansi.LRED)
         return 1
 
+    session_key = args.difficulty or "all"
+    game_state = state_mod.load_state()
+
     console = Console()
     results: list[str] = ["pending"] * len(filtered)
     current_index = 0
+    session_start = time.monotonic()
 
     while current_index < len(filtered):
         printc("(^D = cheatsheet, ^G = navigate, ^C = exit)", Ansi.GRAY)
         print()
         _difficulty, function = filtered[current_index]
         try:
-            test_user(function, console=console)
+            elapsed = test_user(function, console=console)
+
+            func_name = function.__name__
+            prev_best = state_mod.record_challenge_time(
+                game_state,
+                func_name,
+                elapsed,
+            )
+            if prev_best is not None:
+                printc(
+                    f"Time: {state_mod.format_time(elapsed)} "
+                    f"(new personal best! was {state_mod.format_time(prev_best)})",
+                    Ansi.LYELLOW,
+                )
+            else:
+                current_best = state_mod.get_challenge_best(game_state, func_name)
+                if current_best is not None and current_best < elapsed:
+                    printc(
+                        f"Time: {state_mod.format_time(elapsed)} "
+                        f"(best: {state_mod.format_time(current_best)})",
+                        Ansi.GRAY,
+                    )
+                else:
+                    printc(f"Time: {state_mod.format_time(elapsed)}", Ansi.GRAY)
+
+            print()
+            state_mod.save_state(game_state)
+
             results[current_index] = "correct"
             current_index += 1
         except KeyboardInterrupt:
             print("\x1b[2K", end="\r")
             break
         except NavigationRequested:
-            picked = pick_challenge(filtered, results, current_index)
+            picked = pick_challenge(
+                filtered,
+                results,
+                current_index,
+                game_state=game_state,
+            )
             if picked is not None:
                 current_index = picked
 
@@ -294,6 +334,34 @@ def main() -> int:
     print("Thanks for playing! :)\n\nResults\n-------")
     printc(f"Correct: {correct}", Ansi.LGREEN)
     printc(f"Remaining: {remaining}", Ansi.GRAY)
+
+    if remaining == 0:
+        session_elapsed = time.monotonic() - session_start
+        prev_session = state_mod.record_session_time(
+            game_state,
+            session_key,
+            session_elapsed,
+        )
+        if prev_session is not None:
+            printc(
+                f"Session time: {state_mod.format_time(session_elapsed)} "
+                f"(new personal best! was {state_mod.format_time(prev_session)})",
+                Ansi.LYELLOW,
+            )
+        else:
+            current_session = game_state["session_bests"].get(session_key)
+            if current_session is not None and current_session < session_elapsed:
+                printc(
+                    f"Session time: {state_mod.format_time(session_elapsed)} "
+                    f"(best: {state_mod.format_time(current_session)})",
+                    Ansi.GRAY,
+                )
+            else:
+                printc(
+                    f"Session time: {state_mod.format_time(session_elapsed)}",
+                    Ansi.GRAY,
+                )
+        state_mod.save_state(game_state)
 
     return 0
 

@@ -11,6 +11,7 @@ from typing import Any
 from typing import Callable
 from typing import Iterator
 
+from .state import format_time as _format_time
 from .test_functions import Difficulty
 
 
@@ -144,6 +145,8 @@ def pick_challenge(
     challenges: list[tuple[Difficulty, Callable[..., Any]]],
     results: list[str],
     current_index: int,
+    *,
+    game_state: dict[str, Any] | None = None,
 ) -> int | None:
     """Interactive challenge picker using arrow keys.
 
@@ -192,7 +195,13 @@ def pick_challenge(
                 else:
                     status = " "
 
-                row = f"  {status} {name:<28s} ({diff_label})"
+                best_suffix = ""
+                if game_state is not None:
+                    best = game_state["challenge_bests"].get(name)
+                    if best is not None:
+                        best_suffix = f"  {_format_time(best)}"
+
+                row = f"  {status} {name:<28s} ({diff_label}){best_suffix}"
                 if i == cursor:
                     row = f"\x1b[38;2;180;160;255m{row}\x1b[m"
                 elif i == current_index:
