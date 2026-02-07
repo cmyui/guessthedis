@@ -13,6 +13,7 @@ import inspect
 import signal
 import subprocess
 import tempfile
+import types
 import textwrap
 from enum import IntEnum
 from typing import Any
@@ -168,8 +169,10 @@ def test_user(disassembly_target: Callable[..., Any]) -> bool:
                 continue
 
             # user has provided some input - check if it's correct
-            user_input_opcode, *user_input_args = user_input_raw.split()
-            user_input_opcode = user_input_opcode.lower()
+            # split only on the first space to preserve whitespace in arguments
+            parts = user_input_raw.split(maxsplit=1)
+            user_input_opcode = parts[0].lower()
+            user_input_arg_raw = parts[1] if len(parts) > 1 else None
 
             # validate operation code name
             if user_input_opcode != instruction.opname.lower():
@@ -178,23 +181,20 @@ def test_user(disassembly_target: Callable[..., Any]) -> bool:
 
             # if this opcode expects arguments,
             # parse them from user input & validate
-            if (
-                instruction.arg is not None
-                # for this, the argument is the offset for
-                # the end of the loop, this is pretty hard
-                # to figure out, so i'll allow mistakes for now.
-                and instruction.opcode not in OPCODES_WITH_LINE_NUMBER_ARGUMENT
-            ):
-                if not user_input_args:
+            has_unparseable_arg = (
+                instruction.opcode in OPCODES_WITH_LINE_NUMBER_ARGUMENT
+                or isinstance(instruction.argval, types.CodeType)
+            )
+            if instruction.arg is not None and not has_unparseable_arg:
+                if user_input_arg_raw is None:
                     printc("Missing argument(s), please try again", Ansi.LRED)
                     continue
 
-                # NOTE: no python instruction uses more than a single argument,
-                # so in reality we're only parsing a single argument here.
-                user_input_args_str = " ".join(user_input_args)
+                user_input_args_str = user_input_arg_raw
                 if isinstance(instruction.argval, str):
-                    # strings are easy - just forward it through
-                    user_input_arg = user_input_args_str
+                    # compare stripped since leading/trailing whitespace
+                    # is indistinguishable from the opcode delimiter
+                    user_input_arg = user_input_args_str.strip()
                 else:
                     # argument type is something different - attempt a literal eval
                     try:
@@ -221,14 +221,18 @@ def test_user(disassembly_target: Callable[..., Any]) -> bool:
                         )
                         continue
 
-                if instruction.argval != user_input_arg:
+                expected_argval = instruction.argval
+                if isinstance(expected_argval, str):
+                    expected_argval = expected_argval.strip()
+
+                if expected_argval != user_input_arg:
                     printc(
                         f"Incorrect argument value: {user_input_args_str}",
                         Ansi.LRED,
                     )
                     continue
             else:
-                if user_input_args:
+                if user_input_arg_raw is not None:
                     printc(
                         "Provided argument(s) in invalid context, please try again",
                         Ansi.LRED,
