@@ -28,27 +28,26 @@ from . import test_functions
 __author__ = "Joshua Smith (cmyui)"
 __email__ = "cmyuiosu@gmail.com"
 
-# Opcodes whose arguments are not realistically possible
-# for the user to input (jump targets, conversion flags, etc.)
-OPCODES_WITH_UNPARSEABLE_ARGUMENT = frozenset(
-    dis.opmap[name]
-    for name in (
-        "FOR_ITER",
-        "FORMAT_VALUE",
-        "JUMP_ABSOLUTE",
-        "JUMP_BACKWARD",
-        "JUMP_FORWARD",
-        "JUMP_IF_FALSE_OR_POP",
-        "JUMP_IF_NONE",
-        "JUMP_IF_NOT_EXC_MATCH",
-        "JUMP_IF_NOT_NONE",
-        "JUMP_IF_TRUE_OR_POP",
-        "POP_JUMP_IF_FALSE",
-        "POP_JUMP_IF_NONE",
-        "POP_JUMP_IF_NOT_NONE",
-        "POP_JUMP_IF_TRUE",
+# Opcodes whose arguments are not viable for user input.
+#
+# Jump opcodes (dis.hasjrel, dis.hasjabs) have byte-offset targets
+# that change with any code modification. These are covered
+# automatically across all Python versions via the dis module.
+#
+# Additionally, some opcodes have non-literal argvals:
+# - FORMAT_VALUE (3.10-3.12): argval is a (conversion, has_format_spec) tuple
+# - CONVERT_VALUE (3.13-3.14): argval is a builtin function object (e.g. repr)
+OPCODES_WITH_UNPARSEABLE_ARGUMENT = (
+    frozenset(dis.hasjrel)
+    | frozenset(dis.hasjabs)
+    | frozenset(
+        dis.opmap[name]
+        for name in (
+            "CONVERT_VALUE",  # 3.13+
+            "FORMAT_VALUE",  # 3.10-3.12
+        )
+        if name in dis.opmap
     )
-    if name in dis.opmap
 )
 
 
