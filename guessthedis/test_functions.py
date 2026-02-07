@@ -19,6 +19,9 @@ def register(f: T) -> T:
     return f
 
 
+# -- Beginner --
+
+
 @register
 def no_op_pass() -> None:
     pass
@@ -40,6 +43,19 @@ def binary_op() -> int:
 
 
 @register
+def store_primitive_types_fast() -> None:
+    i = 5
+    f = 3.14
+    b = True
+
+
+@register
+def del_variable() -> None:
+    x = 42
+    del x
+
+
+@register
 def function_call() -> list[str]:
     return dir()
 
@@ -47,6 +63,20 @@ def function_call() -> list[str]:
 @register
 def method_call() -> str:
     return "abc".upper()
+
+
+@register
+def binary_subscr(l: list[int]) -> int:
+    return l[0]
+
+
+@register
+def multiple_assignment() -> tuple[int, int, int]:
+    a, b, c = 1, 2, 3
+    return (a, b, c)
+
+
+# -- Intermediate --
 
 
 @register
@@ -59,10 +89,18 @@ def if_else() -> int:
 
 
 @register
-def store_primitive_types_fast() -> None:
-    i = 5
-    f = 3.14
-    b = True
+def ternary_expression(x: int) -> str:
+    return "positive" if x > 0 else "non-positive"
+
+
+@register
+def boolean_short_circuit(a: int, b: int) -> int:
+    return a and b or 0
+
+
+@register
+def string_formatting(name: str, age: int) -> str:
+    return f"{name} is {age} years old"
 
 
 @register
@@ -72,11 +110,6 @@ def store_collection_types_fast() -> None:
     s = {1, 2, 3}
     d = {"a": 1, "b": 2, "c": 3}
     r = range(10)
-
-
-@register
-def binary_subscr(l: list[int]) -> int:
-    return l[0]
 
 
 @register
@@ -110,35 +143,22 @@ def dict_comprehension() -> dict[int, int]:
 
 
 @register
+def chained_comparison(x: int) -> bool:
+    return 0 < x < 10
+
+
+@register
+def star_unpacking() -> list[int]:
+    a, *b, c = [1, 2, 3, 4, 5]
+    return b
+
+
+@register
 def raise_exception() -> None:
     raise Exception("This is an exception")
 
 
-# -- Beginner --
-
-
-@register
-def ternary_expression(x: int) -> str:
-    return "positive" if x > 0 else "non-positive"
-
-
-@register
-def boolean_short_circuit(a: int, b: int) -> int:
-    return a and b or 0
-
-
-@register
-def string_formatting(name: str, age: int) -> str:
-    return f"{name} is {age} years old"
-
-
-@register
-def multiple_assignment() -> tuple[int, int, int]:
-    a, b, c = 1, 2, 3
-    return (a, b, c)
-
-
-# -- Intermediate --
+# -- Advanced --
 
 
 @register
@@ -153,26 +173,6 @@ def try_except() -> int:
 def with_statement() -> str:
     with open("/dev/null") as f:
         return f.read()
-
-
-@register
-def chained_comparison(x: int) -> bool:
-    return 0 < x < 10
-
-
-@register
-def star_unpacking() -> list[int]:
-    a, *b, c = [1, 2, 3, 4, 5]
-    return b
-
-
-@register
-def del_variable() -> None:
-    x = 42
-    del x
-
-
-# -- Advanced --
 
 
 @register
