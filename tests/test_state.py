@@ -49,15 +49,16 @@ class TestLoadState:
         s = state.load_state()
         assert s["challenge_bests"]["no_op_pass"] == 4.21
 
-    def test_corrupted_json(self, tmp_path, monkeypatch) -> None:
+    def test_corrupted_json_returns_read_only(self, tmp_path, monkeypatch) -> None:
         monkeypatch.setattr(state, "STATE_DIR", tmp_path)
         state_file = tmp_path / "state.json"
         monkeypatch.setattr(state, "STATE_FILE", state_file)
         state_file.write_text("not valid json{{{")
         s = state.load_state()
         assert s["challenge_bests"] == {}
+        assert s.get(state._READ_ONLY_KEY) is True
 
-    def test_newer_version(self, tmp_path, monkeypatch) -> None:
+    def test_newer_version_returns_read_only(self, tmp_path, monkeypatch) -> None:
         monkeypatch.setattr(state, "STATE_DIR", tmp_path)
         state_file = tmp_path / "state.json"
         monkeypatch.setattr(state, "STATE_FILE", state_file)
@@ -65,6 +66,15 @@ class TestLoadState:
         state_file.write_text(json.dumps(data))
         s = state.load_state()
         assert s["version"] == state.CURRENT_VERSION
+        assert s.get(state._READ_ONLY_KEY) is True
+
+    def test_invalid_structure_returns_read_only(self, tmp_path, monkeypatch) -> None:
+        monkeypatch.setattr(state, "STATE_DIR", tmp_path)
+        state_file = tmp_path / "state.json"
+        monkeypatch.setattr(state, "STATE_FILE", state_file)
+        state_file.write_text(json.dumps([1, 2, 3]))
+        s = state.load_state()
+        assert s.get(state._READ_ONLY_KEY) is True
 
     def test_missing_keys_filled(self, tmp_path, monkeypatch) -> None:
         monkeypatch.setattr(state, "STATE_DIR", tmp_path)
@@ -86,6 +96,28 @@ class TestSaveState:
         state.save_state(data)
         loaded = state.load_state()
         assert loaded["challenge_bests"]["foo"] == 1.23
+
+    def test_read_only_skips_write(self, tmp_path, monkeypatch) -> None:
+        monkeypatch.setattr(state, "STATE_DIR", tmp_path)
+        state_file = tmp_path / "state.json"
+        monkeypatch.setattr(state, "STATE_FILE", state_file)
+        original_content = "not valid json{{{"
+        state_file.write_text(original_content)
+        s = state.load_state()
+        s["challenge_bests"]["foo"] = 1.23
+        state.save_state(s)
+        assert state_file.read_text() == original_content
+
+    def test_newer_version_preserves_file(self, tmp_path, monkeypatch) -> None:
+        monkeypatch.setattr(state, "STATE_DIR", tmp_path)
+        state_file = tmp_path / "state.json"
+        monkeypatch.setattr(state, "STATE_FILE", state_file)
+        original = {"version": 999, "challenge_bests": {"x": 1.0}, "session_bests": {}}
+        state_file.write_text(json.dumps(original))
+        s = state.load_state()
+        s["challenge_bests"]["foo"] = 1.23
+        state.save_state(s)
+        assert json.loads(state_file.read_text()) == original
 
 
 class TestGetChallengeBest:

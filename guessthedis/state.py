@@ -2,13 +2,13 @@
 
 import contextlib
 import json
-import logging
 import os
 import tempfile
 from pathlib import Path
 from typing import Any
 
-log = logging.getLogger(__name__)
+_YELLOW = "\x1b[33m"
+_RESET = "\x1b[m"
 
 
 def format_time(seconds: float) -> str:
@@ -24,17 +24,27 @@ CURRENT_VERSION = 1
 STATE_DIR = Path.home() / ".guessthedis"
 STATE_FILE = STATE_DIR / "state.json"
 
+_READ_ONLY_KEY = "_read_only"
 
-def _empty_state() -> dict[str, Any]:
-    return {
+
+def _empty_state(*, read_only: bool = False) -> dict[str, Any]:
+    state: dict[str, Any] = {
         "version": CURRENT_VERSION,
         "challenge_bests": {},
         "session_bests": {},
     }
+    if read_only:
+        state[_READ_ONLY_KEY] = True
+    return state
 
 
 def load_state() -> dict[str, Any]:
-    """Load state from disk, returning empty state on first run or corruption."""
+    """Load state from disk, returning empty state on first run or corruption.
+
+    When the existing file cannot be parsed (corruption, newer version),
+    the returned state is marked read-only so that ``save_state`` will
+    refuse to overwrite the file on disk.
+    """
     STATE_DIR.mkdir(parents=True, exist_ok=True)
 
     if not STATE_FILE.exists():
@@ -43,20 +53,21 @@ def load_state() -> dict[str, Any]:
     try:
         data = json.loads(STATE_FILE.read_text())
     except (json.JSONDecodeError, OSError) as exc:
-        log.warning("Corrupted state file, starting fresh: %s", exc)
-        return _empty_state()
+        print(f"{_YELLOW}Corrupted state file, starting fresh in memory: {exc}{_RESET}")
+        return _empty_state(read_only=True)
 
     if not isinstance(data, dict) or "version" not in data:
-        log.warning("Invalid state file structure, starting fresh")
-        return _empty_state()
+        print(
+            f"{_YELLOW}Invalid state file structure, starting fresh in memory{_RESET}",
+        )
+        return _empty_state(read_only=True)
 
     if data["version"] > CURRENT_VERSION:
-        log.warning(
-            "State file version %d is newer than supported (%d), starting fresh",
-            data["version"],
-            CURRENT_VERSION,
+        print(
+            f"{_YELLOW}State file version {data['version']} is newer than "
+            f"supported ({CURRENT_VERSION}), starting fresh in memory{_RESET}",
         )
-        return _empty_state()
+        return _empty_state(read_only=True)
 
     # ensure expected keys exist
     data.setdefault("challenge_bests", {})
@@ -65,7 +76,17 @@ def load_state() -> dict[str, Any]:
 
 
 def save_state(state: dict[str, Any]) -> None:
-    """Atomically write state to disk via temp file + os.replace()."""
+    """Atomically write state to disk via temp file + os.replace().
+
+    Skips writing if the state is marked read-only (i.e. the existing
+    file on disk could not be loaded and should not be overwritten).
+    """
+    if state.get(_READ_ONLY_KEY):
+        print(
+            f"{_YELLOW}State is read-only, skipping save to preserve existing file{_RESET}",
+        )
+        return
+
     STATE_DIR.mkdir(parents=True, exist_ok=True)
 
     fd, tmp_path = tempfile.mkstemp(dir=STATE_DIR, suffix=".tmp")
