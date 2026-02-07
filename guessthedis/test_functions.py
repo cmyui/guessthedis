@@ -271,6 +271,11 @@ def star_call() -> None:
     print(*args, **kwargs)
 
 
+@register(Difficulty.INTERMEDIATE)
+def fstring_format_spec(value: float, width: int, precision: int) -> str:
+    return f"{value:{width}.{precision}f}"
+
+
 @register(Difficulty.ADVANCED)
 def try_except() -> int:
     try:
@@ -408,13 +413,38 @@ def match_class(data: object) -> int:
             return -1
 
 
-@register(Difficulty.RIDICULOUS)
+@register(Difficulty.ADVANCED)
 def nested_comprehension() -> dict[str, list[int]]:
     return {k: [x * 2 for x in v] for k, v in {"a": [1, 2], "b": [3, 4]}.items()}
 
 
+@register(Difficulty.ADVANCED)
+async def async_generator():
+    for i in range(5):
+        yield i * 2
+
+
+@register(Difficulty.ADVANCED)
+def multiple_with() -> str:
+    with open("/dev/null") as a, open("/dev/null") as b:
+        return a.read() + b.read()
+
+
+@register(Difficulty.ADVANCED)
+def match_or_guard(data: int) -> str:
+    match data:
+        case 1 | 2 | 3:
+            return "small"
+        case x if x > 100:
+            return "big"
+        case _:
+            return "other"
+
+
 if sys.version_info >= (3, 11):
-    exec(
+    # NOTE: except* syntax requires Python 3.11+ and cannot be parsed by
+    # older interpreters, so we use exec() to conditionally define it.
+    exec(  # noqa: S102
         textwrap.dedent("""\
         @register(Difficulty.RIDICULOUS)
         def except_star() -> None:
@@ -427,12 +457,6 @@ if sys.version_info >= (3, 11):
         """),
         globals(),
     )
-
-
-@register(Difficulty.RIDICULOUS)
-async def async_generator():
-    for i in range(5):
-        yield i * 2
 
 
 @register(Difficulty.RIDICULOUS)
@@ -469,25 +493,3 @@ def stacked_decorators() -> None:
     @add_tag("result")
     def greet(name):
         return f"hi {name}"
-
-
-@register(Difficulty.RIDICULOUS)
-def fstring_format_spec(value: float, width: int, precision: int) -> str:
-    return f"{value:{width}.{precision}f}"
-
-
-@register(Difficulty.RIDICULOUS)
-def multiple_with() -> str:
-    with open("/dev/null") as a, open("/dev/null") as b:
-        return a.read() + b.read()
-
-
-@register(Difficulty.RIDICULOUS)
-def match_or_guard(data: int) -> str:
-    match data:
-        case 1 | 2 | 3:
-            return "small"
-        case x if x > 100:
-            return "big"
-        case _:
-            return "other"
