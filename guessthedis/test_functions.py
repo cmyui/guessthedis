@@ -1,85 +1,91 @@
 """Define functions to be used when testing.
 
-Create, and mark a function with `@test` to enable it for selection.
+Create, and mark a function with `@register(Difficulty.LEVEL)` to enable it
+for selection.
 
 There are some pre-added examples you can try out as well.
 """
 
+from enum import IntEnum
 from typing import Any
 from typing import Callable
 from typing import TypeVar
 
 T = TypeVar("T", bound=Callable[..., Any])
 
-functions: list[Callable[[], Any]] = []
+
+class Difficulty(IntEnum):
+    BEGINNER = 1
+    INTERMEDIATE = 2
+    ADVANCED = 3
 
 
-def register(f: T) -> T:
-    functions.append(f)
-    return f
+functions: list[tuple[Difficulty, Callable[..., Any]]] = []
 
 
-# -- Beginner --
+def register(difficulty: Difficulty) -> Callable[[T], T]:
+    def decorator(f: T) -> T:
+        functions.append((difficulty, f))
+        return f
+
+    return decorator
 
 
-@register
+@register(Difficulty.BEGINNER)
 def no_op_pass() -> None:
     pass
 
 
-@register
+@register(Difficulty.BEGINNER)
 def no_op_ellipsis() -> None: ...
 
 
-@register
+@register(Difficulty.BEGINNER)
 def unary_op() -> int:
     x = 5
     return -x
 
 
-@register
+@register(Difficulty.BEGINNER)
 def binary_op() -> int:
     return 5 * 5
 
 
-@register
+@register(Difficulty.BEGINNER)
 def store_primitive_types_fast() -> None:
     i = 5
     f = 3.14
     b = True
 
 
-@register
+@register(Difficulty.BEGINNER)
 def del_variable() -> None:
     x = 42
     del x
 
 
-@register
+@register(Difficulty.BEGINNER)
 def function_call() -> list[str]:
     return dir()
 
 
-@register
+@register(Difficulty.BEGINNER)
 def method_call() -> str:
     return "abc".upper()
 
 
-@register
+@register(Difficulty.BEGINNER)
 def binary_subscr(l: list[int]) -> int:
     return l[0]
 
 
-@register
+@register(Difficulty.BEGINNER)
 def multiple_assignment() -> tuple[int, int, int]:
     a, b, c = 1, 2, 3
     return (a, b, c)
 
 
-# -- Intermediate --
-
-
-@register
+@register(Difficulty.INTERMEDIATE)
 def if_else() -> int:
     x = True
     if x:
@@ -88,22 +94,22 @@ def if_else() -> int:
         return 0
 
 
-@register
+@register(Difficulty.INTERMEDIATE)
 def ternary_expression(x: int) -> str:
     return "positive" if x > 0 else "non-positive"
 
 
-@register
+@register(Difficulty.INTERMEDIATE)
 def boolean_short_circuit(a: int, b: int) -> int:
     return a and b or 0
 
 
-@register
+@register(Difficulty.INTERMEDIATE)
 def string_formatting(name: str, age: int) -> str:
     return f"{name} is {age} years old"
 
 
-@register
+@register(Difficulty.INTERMEDIATE)
 def store_collection_types_fast() -> None:
     l = [1, 2, 3]
     t = (1, 2, 3)
@@ -112,7 +118,7 @@ def store_collection_types_fast() -> None:
     r = range(10)
 
 
-@register
+@register(Difficulty.INTERMEDIATE)
 def for_loop() -> int:
     total = 0
     for i in range(10):
@@ -120,7 +126,7 @@ def for_loop() -> int:
     return total
 
 
-@register
+@register(Difficulty.INTERMEDIATE)
 def while_loop() -> int:
     total = 0
     while total < 10:
@@ -128,40 +134,37 @@ def while_loop() -> int:
     return total
 
 
-@register
+@register(Difficulty.INTERMEDIATE)
 def list_comprehension() -> list[int]:
     r = range(5)
     l = [i * 2 for i in r]
     return l
 
 
-@register
+@register(Difficulty.INTERMEDIATE)
 def dict_comprehension() -> dict[int, int]:
     r = range(5)
     l = {i: i * 2 for i in r}
     return l
 
 
-@register
+@register(Difficulty.INTERMEDIATE)
 def chained_comparison(x: int) -> bool:
     return 0 < x < 10
 
 
-@register
+@register(Difficulty.INTERMEDIATE)
 def star_unpacking() -> list[int]:
     a, *b, c = [1, 2, 3, 4, 5]
     return b
 
 
-@register
+@register(Difficulty.INTERMEDIATE)
 def raise_exception() -> None:
     raise Exception("This is an exception")
 
 
-# -- Advanced --
-
-
-@register
+@register(Difficulty.ADVANCED)
 def try_except() -> int:
     try:
         return int("abc")
@@ -169,20 +172,20 @@ def try_except() -> int:
         return -1
 
 
-@register
+@register(Difficulty.ADVANCED)
 def with_statement() -> str:
     with open("/dev/null") as f:
         return f.read()
 
 
-@register
+@register(Difficulty.ADVANCED)
 def walrus_operator(data: list[int]) -> int | None:
     if (n := len(data)) > 3:
         return n
     return None
 
 
-@register
+@register(Difficulty.ADVANCED)
 def generator_function() -> int:
     def gen():
         yield 1
@@ -192,7 +195,7 @@ def generator_function() -> int:
     return sum(gen())
 
 
-@register
+@register(Difficulty.ADVANCED)
 def nested_closure() -> int:
     x = 10
 
@@ -202,7 +205,7 @@ def nested_closure() -> int:
     return inner()
 
 
-@register
+@register(Difficulty.ADVANCED)
 def match_statement(command: str) -> str:
     match command:
         case "quit":
@@ -213,13 +216,13 @@ def match_statement(command: str) -> str:
             return "unknown"
 
 
-@register
+@register(Difficulty.ADVANCED)
 def create_function() -> None:
     def f(x: int, y: int) -> int:
         return x + y
 
 
-@register
+@register(Difficulty.ADVANCED)
 def create_class() -> None:
     class Player:
         def __init__(self, name: str) -> None:

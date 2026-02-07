@@ -4,6 +4,7 @@ For an in-detail explanation, please visit
 the repo @ https://github.com/cmyui/guessthedis
 """
 
+import argparse
 import ast
 import contextlib
 import dis
@@ -22,6 +23,7 @@ from rich.console import Console
 from rich.syntax import Syntax
 
 from . import test_functions
+from .test_functions import Difficulty
 
 __author__ = "Joshua Smith (cmyui)"
 __email__ = "cmyuiosu@gmail.com"
@@ -260,9 +262,46 @@ def test_user(
     return True
 
 
+DIFFICULTY_CHOICES = [
+    "beginner",
+    "intermediate",
+    "advanced",
+    "beginner+",
+    "intermediate+",
+    "advanced+",
+]
+
+
+def _parse_difficulty_filter(raw: str) -> tuple[Difficulty, bool]:
+    """Parse a difficulty flag value into (level, and_above)."""
+    and_above = raw.endswith("+")
+    name = raw.removesuffix("+").upper()
+    return Difficulty[name], and_above
+
+
 def main() -> int:
-    if not test_functions.functions:
-        printc("No functions marked with @test", Ansi.LRED)
+    parser = argparse.ArgumentParser(description="guessthedis")
+    parser.add_argument(
+        "-d",
+        "--difficulty",
+        choices=DIFFICULTY_CHOICES,
+        default=None,
+        help="filter functions by difficulty level (append '+' for that level and above)",
+    )
+    args = parser.parse_args()
+
+    if args.difficulty is not None:
+        min_difficulty, and_above = _parse_difficulty_filter(args.difficulty)
+        filtered = [
+            (d, f)
+            for d, f in test_functions.functions
+            if (d >= min_difficulty if and_above else d == min_difficulty)
+        ]
+    else:
+        filtered = test_functions.functions
+
+    if not filtered:
+        printc("No functions matched the given difficulty", Ansi.LRED)
         return 1
 
     # use gnu readline interface
@@ -272,7 +311,7 @@ def main() -> int:
     console = Console()
     correct = incorrect = 0
 
-    for function in test_functions.functions:
+    for _difficulty, function in filtered:
         try:
             disassembled_correctly = test_user(function, console=console)
         except KeyboardInterrupt:
