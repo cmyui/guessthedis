@@ -2,42 +2,46 @@
 
 A command-line game to test & grow your python bytecode disassembly knowledge.
 
+Supports Python 3.10+. Note that bytecode instructions differ between Python
+versions, so the expected answers depend on which version you're running.
 
 # How to play
-Write a function in `guessthedis/test_functions.py`, and apply the `@test` decorator to it.\
-(There are also some commented-out, sample functions you can try)
+There are 30 built-in functions organized by difficulty (beginner, intermediate,
+advanced) in `guessthedis/test_functions.py`. You can also write your own and
+apply the `@register` decorator to include them.
+
 ```py
-@test
-def f(x: int, y: int) -> str:
-    x *= 2
-    z = 'abc'
-    return z * x ** y
+@register
+def unary_op() -> int:
+    x = 5
+    return -x
 ```
-Run the program.
-It will pick a function marked with `@test`, and prompt you
-to write the disassembly (instructions & data).
-```py
-$ ./main.py
-def f(x: int, y: int) -> str:
-    x *= 2
-    z = 'abc'
-    return z * x ** y
+Run the program with `python -m guessthedis`. It will show each function and
+prompt you to write the disassembly (opcode name & arguments) line by line.
+
+String arguments can be typed bare or quoted -- both `load_fast x` and
+`load_fast 'x'` are accepted. String constants with whitespace must be
+quoted (e.g. `load_const ' is '`).
+
+```
+$ python -m guessthedis
+Given the following function:
+  1 def unary_op() -> int:
+  2     x = 5
+  3     return -x
 
 Write the disassembly below (line by line):
-0: load_fast x
-2: load_const 2
-4: inplace_multiply
-6: store_fast x
-8: load_const abc
-10: store_fast z
-12: load_fast z
-14: load_fast x
-16: load_fast y
-18: binary_power
-20: binary_multiply
-22: return_value
+0: load_const 5
+2: store_fast x
+4: load_fast x
+6: unary_negative
+8: return_value
 Correct!
 ```
+
+Functions containing nested code objects (inner functions, classes) will also
+quiz you on the inner disassembly after the outer function is complete.
+
 When you exit the game (e.g. with `^C`), your total score will be shown.
 ```
 Thanks for playing! :)
@@ -53,37 +57,21 @@ $
 You'll definitely want to be familiar with python's [dis module](https://docs.python.org/3/library/dis.html) for debugging.
 
 1. It has a comprehensive [documentation of each bytecode instruction](https://docs.python.org/3/library/dis.html#python-bytecode-instructions).
-2. You can use it to check the correct answers:
+2. You can press `^D` during the game to open a cheatsheet showing the correct
+   disassembly for the current function in `less`.
+3. You can use the `dis` module directly to check answers:
 ```py
-$ python
-Python 3.9.9+ (main, Nov 19 2021, 08:51:58)
-[GCC 7.5.0] on linux
-Type "help", "copyright", "credits" or "license" for more information.
->>> def f(x: int, y: int) -> str:
-...     x *= 2
-...     z = 'abc'
-...     return z * x ** y
-...
 >>> import dis
->>> dis.dis(f)
-  2           0 LOAD_FAST                0 (x)
-              2 LOAD_CONST               1 (2)
-              4 INPLACE_MULTIPLY
-              6 STORE_FAST               0 (x)
+>>> def unary_op() -> int:
+...     x = 5
+...     return -x
+...
+>>> dis.dis(unary_op)
+  2           0 LOAD_CONST               1 (5)
+              2 STORE_FAST               0 (x)
 
-  3           8 LOAD_CONST               2 ('abc')
-             10 STORE_FAST               2 (z)
-
-  4          12 LOAD_FAST                2 (z)
-             14 LOAD_FAST                0 (x)
-             16 LOAD_FAST                1 (y)
-             18 BINARY_POWER
-             20 BINARY_MULTIPLY
-             22 RETURN_VALUE
+  3           4 LOAD_FAST                0 (x)
+              6 UNARY_NEGATIVE
+              8 RETURN_VALUE
 >>>
 ```
-
-# Help wanted!
-This idea is currently simple, but I think it could certainly be built on.
-
-I'm looking for project maintainers if anyone's interested in taking this on! :)
