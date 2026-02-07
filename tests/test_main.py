@@ -1,16 +1,9 @@
-from __future__ import annotations
-
 import dis
 
-import pytest
-
-from guessthedis.__main__ import (
-    OPCODES_WITH_UNPARSEABLE_ARGUMENT,
-    _parse_user_arg,
-    get_source_code_lines,
-)
 from guessthedis import test_functions
-
+from guessthedis.__main__ import OPCODES_WITH_UNPARSEABLE_ARGUMENT
+from guessthedis.__main__ import _parse_user_arg
+from guessthedis.__main__ import get_source_code_lines
 
 # -- _parse_user_arg --
 

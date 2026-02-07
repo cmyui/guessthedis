@@ -60,7 +60,7 @@ You'll definitely want to be familiar with python's [dis module](https://docs.py
 2. You can press `^D` during the game to open a cheatsheet showing the correct
    disassembly for the current function in `less`.
 3. You can use the `dis` module directly to check answers:
-```py
+```pycon
 >>> import dis
 >>> def unary_op() -> int:
 ...     x = 5

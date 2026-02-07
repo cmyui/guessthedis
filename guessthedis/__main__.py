@@ -4,8 +4,6 @@ For an in-detail explanation, please visit
 the repo @ https://github.com/cmyui/guessthedis
 """
 
-from __future__ import annotations
-
 import ast
 import contextlib
 import dis
@@ -13,8 +11,8 @@ import inspect
 import signal
 import subprocess
 import tempfile
-import types
 import textwrap
+import types
 from enum import IntEnum
 from typing import Any
 from typing import Callable
@@ -269,7 +267,7 @@ def main() -> int:
 
     # use gnu readline interface
     # https://docs.python.org/3/library/readline.html
-    import readline
+    import readline  # noqa: F401
 
     console = Console()
     correct = incorrect = 0

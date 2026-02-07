@@ -5,9 +5,9 @@ Create, and mark a function with `@test` to enable it for selection.
 There are some pre-added examples you can try out as well.
 """
 
-from __future__ import annotations
-
-from typing import Any, Callable, TypeVar
+from typing import Any
+from typing import Callable
+from typing import TypeVar
 
 T = TypeVar("T", bound=Callable[..., Any])
 

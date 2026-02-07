@@ -1,0 +1,16 @@
+[tool.ruff]
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "F",     # pyflakes
+    "I",     # isort (import sorting)
+    "COM",   # trailing commas
+]
+
+[tool.ruff.lint.isort]
+force-single-line = true
+
+[tool.ruff.lint.per-file-ignores]
+"guessthedis/test_functions.py" = ["F841"]  # unused variables are intentional bytecode exercises
+"guessthedis/__init__.py" = ["F401"]  # re-export
