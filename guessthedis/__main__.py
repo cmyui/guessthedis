@@ -30,15 +30,23 @@ __email__ = "cmyuiosu@gmail.com"
 # These opcodes require a line number argument, which is not realistically
 # possible to input by the user, so we'll allow some grace for these.
 OPCODES_WITH_LINE_NUMBER_ARGUMENT = frozenset(
-    {
-        dis.opmap["FOR_ITER"],
-        dis.opmap["JUMP_ABSOLUTE"],
-        dis.opmap["JUMP_FORWARD"],
-        dis.opmap["JUMP_IF_FALSE_OR_POP"],
-        dis.opmap["JUMP_IF_TRUE_OR_POP"],
-        dis.opmap["JUMP_IF_NOT_EXC_MATCH"],
-        dis.opmap["JUMP_IF_NOT_NONE"],
-    }
+    dis.opmap[name]
+    for name in (
+        "FOR_ITER",
+        "JUMP_ABSOLUTE",
+        "JUMP_FORWARD",
+        "JUMP_BACKWARD",
+        "JUMP_IF_FALSE_OR_POP",
+        "JUMP_IF_TRUE_OR_POP",
+        "JUMP_IF_NOT_EXC_MATCH",
+        "JUMP_IF_NOT_NONE",
+        "JUMP_IF_NONE",
+        "POP_JUMP_IF_FALSE",
+        "POP_JUMP_IF_TRUE",
+        "POP_JUMP_IF_NONE",
+        "POP_JUMP_IF_NOT_NONE",
+    )
+    if name in dis.opmap
 )
 
 
@@ -122,11 +130,11 @@ def test_user(disassembly_target: Callable[..., Any]) -> bool:
     instruction_iterator = dis.get_instructions(disassembly_target)
 
     # quiz them on each operation
-    for idx, instruction in enumerate(instruction_iterator):
+    for instruction in instruction_iterator:
         # loop indefinitely to get valid user input
         while True:
             try:
-                user_input_raw = input(f"{idx * 2}: ").strip()
+                user_input_raw = input(f"{instruction.offset}: ").strip()
             except EOFError:
                 # NOTE: ^D can be used to show the correct disassembly "cheatsheet"
                 print("\x1b[2K", end="\r")  # clear current line
@@ -171,7 +179,7 @@ def test_user(disassembly_target: Callable[..., Any]) -> bool:
             # if this opcode expects arguments,
             # parse them from user input & validate
             if (
-                instruction.opcode >= dis.HAVE_ARGUMENT
+                instruction.arg is not None
                 # for this, the argument is the offset for
                 # the end of the loop, this is pretty hard
                 # to figure out, so i'll allow mistakes for now.
