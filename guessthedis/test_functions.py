@@ -6,6 +6,8 @@ for selection.
 There are some pre-added examples you can try out as well.
 """
 
+import sys
+import textwrap
 from enum import IntEnum
 from typing import Any
 from typing import Callable
@@ -18,6 +20,7 @@ class Difficulty(IntEnum):
     BEGINNER = 1
     INTERMEDIATE = 2
     ADVANCED = 3
+    RIDICULOUS = 4
 
 
 functions: list[tuple[Difficulty, Callable[..., Any]]] = []
@@ -403,3 +406,88 @@ def match_class(data: object) -> int:
             return x
         case _:
             return -1
+
+
+@register(Difficulty.RIDICULOUS)
+def nested_comprehension() -> dict[str, list[int]]:
+    return {k: [x * 2 for x in v] for k, v in {"a": [1, 2], "b": [3, 4]}.items()}
+
+
+if sys.version_info >= (3, 11):
+    exec(
+        textwrap.dedent("""\
+        @register(Difficulty.RIDICULOUS)
+        def except_star() -> None:
+            try:
+                raise ExceptionGroup("eg", [ValueError("a"), TypeError("b")])
+            except* ValueError:
+                pass
+            except* TypeError:
+                pass
+        """),
+        globals(),
+    )
+
+
+@register(Difficulty.RIDICULOUS)
+async def async_generator():
+    for i in range(5):
+        yield i * 2
+
+
+@register(Difficulty.RIDICULOUS)
+def metaclass_with_kwargs() -> None:
+    class Meta(type):
+        def __new__(mcs, name, bases, namespace, **kwargs):
+            return super().__new__(mcs, name, bases, namespace)
+
+    class Foo(metaclass=Meta, flag=True):
+        pass
+
+
+@register(Difficulty.RIDICULOUS)
+def stacked_decorators() -> None:
+    def repeat(n):
+        def decorator(f):
+            def wrapper(*args):
+                return [f(*args) for _ in range(n)]
+
+            return wrapper
+
+        return decorator
+
+    def add_tag(tag):
+        def decorator(f):
+            def wrapper(*args):
+                return f"{tag}: {f(*args)}"
+
+            return wrapper
+
+        return decorator
+
+    @repeat(3)
+    @add_tag("result")
+    def greet(name):
+        return f"hi {name}"
+
+
+@register(Difficulty.RIDICULOUS)
+def fstring_format_spec(value: float, width: int, precision: int) -> str:
+    return f"{value:{width}.{precision}f}"
+
+
+@register(Difficulty.RIDICULOUS)
+def multiple_with() -> str:
+    with open("/dev/null") as a, open("/dev/null") as b:
+        return a.read() + b.read()
+
+
+@register(Difficulty.RIDICULOUS)
+def match_or_guard(data: int) -> str:
+    match data:
+        case 1 | 2 | 3:
+            return "small"
+        case x if x > 100:
+            return "big"
+        case _:
+            return "other"
