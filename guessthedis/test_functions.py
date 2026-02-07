@@ -85,6 +85,39 @@ def multiple_assignment() -> tuple[int, int, int]:
     return (a, b, c)
 
 
+@register(Difficulty.BEGINNER)
+def membership_test(x: int, items: list[int]) -> bool:
+    return x in items
+
+
+@register(Difficulty.BEGINNER)
+def identity_test(x: object) -> bool:
+    return x is None
+
+
+@register(Difficulty.BEGINNER)
+def assert_statement(x: int) -> None:
+    assert x > 0, "must be positive"
+
+
+@register(Difficulty.BEGINNER)
+def bitwise_invert(x: int) -> int:
+    return ~x
+
+
+@register(Difficulty.BEGINNER)
+def import_statement() -> str:
+    from os.path import join
+
+    return join("a", "b")
+
+
+@register(Difficulty.BEGINNER)
+def lambda_expression() -> int:
+    f = lambda x, y: x + y
+    return f(1, 2)
+
+
 @register(Difficulty.INTERMEDIATE)
 def if_else() -> int:
     x = True
@@ -162,6 +195,77 @@ def star_unpacking() -> list[int]:
 @register(Difficulty.INTERMEDIATE)
 def raise_exception() -> None:
     raise Exception("This is an exception")
+
+
+@register(Difficulty.INTERMEDIATE)
+def set_comprehension() -> set[int]:
+    r = range(5)
+    s = {i * 2 for i in r}
+    return s
+
+
+@register(Difficulty.INTERMEDIATE)
+def generator_expression() -> int:
+    return sum(x * 2 for x in range(5))
+
+
+@register(Difficulty.INTERMEDIATE)
+def for_else() -> int:
+    for i in range(10):
+        if i == 5:
+            break
+    else:
+        return -1
+    return i
+
+
+@register(Difficulty.INTERMEDIATE)
+def subscript_store_delete() -> None:
+    d: dict[str, str] = {}
+    d["key"] = "value"
+    del d["key"]
+
+
+@register(Difficulty.INTERMEDIATE)
+def raise_from() -> None:
+    try:
+        pass
+    except Exception as e:
+        raise RuntimeError("wrapped") from e
+
+
+@register(Difficulty.INTERMEDIATE)
+def try_finally() -> int:
+    try:
+        x = 1
+    finally:
+        x = 0
+    return x
+
+
+@register(Difficulty.INTERMEDIATE)
+def global_statement() -> None:
+    global _global_var
+    _global_var = 42
+
+
+@register(Difficulty.INTERMEDIATE)
+def nonlocal_statement() -> int:
+    x = 10
+
+    def inner() -> int:
+        nonlocal x
+        x += 1
+        return x
+
+    return inner()
+
+
+@register(Difficulty.INTERMEDIATE)
+def star_call() -> None:
+    args = (1, 2, 3)
+    kwargs = {"sep": "-"}
+    print(*args, **kwargs)
 
 
 @register(Difficulty.ADVANCED)
@@ -245,3 +349,57 @@ def create_class() -> None:
     class Player:
         def __init__(self, name: str) -> None:
             self.name = name
+
+
+@register(Difficulty.ADVANCED)
+async def async_await() -> None:
+    import asyncio
+
+    await asyncio.sleep(0)
+
+
+@register(Difficulty.ADVANCED)
+async def async_for(aiter: Any) -> None:
+    async for item in aiter:
+        pass
+
+
+@register(Difficulty.ADVANCED)
+async def async_with(ctx: Any) -> None:
+    async with ctx as c:
+        pass
+
+
+@register(Difficulty.ADVANCED)
+def yield_from_delegation() -> list[int]:
+    def inner():
+        yield from range(5)
+
+    return list(inner())
+
+
+@register(Difficulty.ADVANCED)
+def match_sequence(data: list[int]) -> int:
+    match data:
+        case [x, y, *rest]:
+            return x + y
+        case _:
+            return -1
+
+
+@register(Difficulty.ADVANCED)
+def match_mapping(data: dict[str, Any]) -> str:
+    match data:
+        case {"name": name, "age": age}:
+            return f"{name}: {age}"
+        case _:
+            return "unknown"
+
+
+@register(Difficulty.ADVANCED)
+def match_class(data: object) -> int:
+    match data:
+        case int(x):
+            return x
+        case _:
+            return -1
