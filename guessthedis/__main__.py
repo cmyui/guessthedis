@@ -9,10 +9,14 @@ import ast
 import contextlib
 import dis
 import inspect
+import os
 import signal
 import subprocess
+import sys
 import tempfile
+import termios
 import textwrap
+import tty
 import types
 from enum import IntEnum
 from typing import Any
@@ -92,6 +96,91 @@ def printc(string: str, col: Ansi, end="\n") -> None:
     print(f"{col!r}{string}\x1b[m", end=end)
 
 
+class NavigationRequested(Exception):
+    """Raised when the user presses ^G to open the challenge picker."""
+
+
+_input_history: list[str] = []
+
+
+def _read_line(prompt: str) -> str:
+    """Read a line of input with support for ^G (navigation), ^D (EOF), ^C (interrupt).
+
+    Handles character-by-character reading in raw terminal mode to intercept
+    hotkeys while supporting basic line editing (backspace, enter) and
+    up/down arrow history navigation.
+    """
+    sys.stdout.write(prompt)
+    sys.stdout.flush()
+
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+    try:
+        tty.setraw(fd)
+        buf: list[str] = []
+        history_index = len(_input_history)
+        saved_line = ""
+
+        def _replace_buf(new_content: str) -> None:
+            # erase current display, replace buffer contents
+            if buf:
+                sys.stdout.write(f"\x1b[{len(buf)}D\x1b[0K")
+            buf.clear()
+            buf.extend(new_content)
+            sys.stdout.write(new_content)
+            sys.stdout.flush()
+
+        while True:
+            ch = sys.stdin.read(1)
+            if ch == "\x07":  # ^G
+                sys.stdout.write("\x1b[2K\r")
+                sys.stdout.flush()
+                raise NavigationRequested
+            elif ch == "\x04":  # ^D
+                sys.stdout.write("\x1b[2K\r")
+                sys.stdout.flush()
+                raise EOFError
+            elif ch == "\x03":  # ^C
+                sys.stdout.write("\x1b[2K\r")
+                sys.stdout.flush()
+                raise KeyboardInterrupt
+            elif ch == "\x1b":  # escape sequence
+                seq = sys.stdin.read(1)
+                if seq == "[":
+                    arrow = sys.stdin.read(1)
+                    if arrow == "A":  # up
+                        if history_index > 0:
+                            if history_index == len(_input_history):
+                                saved_line = "".join(buf)
+                            history_index -= 1
+                            _replace_buf(_input_history[history_index])
+                    elif arrow == "B":  # down
+                        if history_index < len(_input_history):
+                            history_index += 1
+                            if history_index == len(_input_history):
+                                _replace_buf(saved_line)
+                            else:
+                                _replace_buf(_input_history[history_index])
+            elif ch in ("\r", "\n"):  # Enter
+                sys.stdout.write("\r\n")
+                sys.stdout.flush()
+                line = "".join(buf)
+                if line:
+                    _input_history.append(line)
+                return line
+            elif ch in ("\x7f", "\x08"):  # Backspace
+                if buf:
+                    buf.pop()
+                    sys.stdout.write("\b \b")
+                    sys.stdout.flush()
+            elif ch >= " ":  # printable characters
+                buf.append(ch)
+                sys.stdout.write(ch)
+                sys.stdout.flush()
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+
+
 def get_source_code_lines(disassembly_target: Callable[..., Any]) -> list[str]:
     """Get the source code of a function."""
     source_lines, _ = inspect.getsourcelines(disassembly_target)
@@ -152,7 +241,7 @@ def _quiz_instructions(
         # loop indefinitely to get valid user input
         while True:
             try:
-                user_input_raw = input(f"{instruction.offset}: ").strip()
+                user_input_raw = _read_line(f"{instruction.offset}: ").strip()
             except EOFError:
                 # NOTE: ^D can be used to show the correct disassembly "cheatsheet"
                 print("\x1b[2K", end="\r")  # clear current line
@@ -236,6 +325,97 @@ def _quiz_instructions(
         _quiz_instructions(code_obj)
 
 
+def _pick_challenge(
+    challenges: list[tuple[Difficulty, Callable[..., Any]]],
+    results: list[str],
+    current_index: int,
+) -> int | None:
+    """Interactive challenge picker using arrow keys.
+
+    Returns the selected index, or None if the user cancels.
+    """
+    cursor = current_index
+    term_height = os.get_terminal_size().lines
+    # reserve lines for header (2) + footer (1) + padding (1)
+    viewport_size = max(term_height - 4, 5)
+
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+    try:
+        tty.setraw(fd)
+
+        # hide cursor
+        sys.stdout.write("\x1b[?25l")
+
+        while True:
+            total = len(challenges)
+            # compute viewport scroll offset
+            if total <= viewport_size:
+                scroll_offset = 0
+                visible_count = total
+            else:
+                half = viewport_size // 2
+                if cursor < half:
+                    scroll_offset = 0
+                elif cursor >= total - (viewport_size - half):
+                    scroll_offset = total - viewport_size
+                else:
+                    scroll_offset = cursor - half
+                visible_count = viewport_size
+
+            lines: list[str] = []
+            lines.append("Challenge Navigation (^G)")
+            lines.append("\u2500" * 40)
+
+            for i in range(scroll_offset, scroll_offset + visible_count):
+                difficulty, func = challenges[i]
+                name = func.__name__
+                diff_label = difficulty.name.lower()
+
+                if results[i] == "correct":
+                    status = f"\x1b[{Ansi.LGREEN.value}m\u2713\x1b[m"
+                else:
+                    status = " "
+
+                row = f"  {status} {name:<28s} ({diff_label})"
+                if i == cursor:
+                    row = f"\x1b[38;2;180;160;255m{row}\x1b[m"
+                elif i == current_index:
+                    row = f"\x1b[38;2;227;160;75m{row}\x1b[m"
+                lines.append(row)
+
+            lines.append("")
+            lines.append("\u2191\u2193 navigate | Enter select | q/^C cancel")
+
+            output = "\x1b[2J\x1b[H" + "\r\n".join(lines)
+            sys.stdout.write(output)
+            sys.stdout.flush()
+
+            # read input
+            ch = sys.stdin.read(1)
+            if ch == "\x1b":  # escape sequence or bare Escape
+                seq = sys.stdin.read(1)
+                if seq == "[":
+                    arrow = sys.stdin.read(1)
+                    if arrow == "A":  # up
+                        cursor = max(0, cursor - 1)
+                    elif arrow == "B":  # down
+                        cursor = min(total - 1, cursor + 1)
+                elif seq == "\x1b":
+                    # double-Escape — cancel
+                    return None
+                # otherwise ignore unknown escape sequences
+            elif ch in ("\x03", "q"):  # ^C or q
+                return None
+            elif ch in ("\r", "\n"):  # Enter
+                return cursor
+    finally:
+        # show cursor, clear screen, restore terminal
+        sys.stdout.write("\x1b[?25h\x1b[2J\x1b[H")
+        sys.stdout.flush()
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+
+
 def test_user(
     disassembly_target: Callable[..., Any],
     *,
@@ -306,30 +486,33 @@ def main() -> int:
         printc("No functions matched the given difficulty", Ansi.LRED)
         return 1
 
-    # use gnu readline interface
-    # https://docs.python.org/3/library/readline.html
-    import readline  # noqa: F401
-
     console = Console()
-    correct = incorrect = 0
+    results: list[str] = ["pending"] * len(filtered)
+    current_index = 0
 
-    for _difficulty, function in filtered:
+    while current_index < len(filtered):
+        printc("(^D = cheatsheet, ^G = navigate, ^C = exit)", Ansi.GRAY)
+        print()
+        _difficulty, function = filtered[current_index]
         try:
-            disassembled_correctly = test_user(function, console=console)
+            test_user(function, console=console)
+            results[current_index] = "correct"
+            current_index += 1
         except KeyboardInterrupt:
-            # NOTE: ^C can be used to exit the game early
-            print("\x1b[2K", end="\r")  # clear current line
+            print("\x1b[2K", end="\r")
             break
+        except NavigationRequested:
+            picked = _pick_challenge(filtered, results, current_index)
+            if picked is not None:
+                current_index = picked
 
-        if disassembled_correctly:
-            correct += 1
-        else:
-            incorrect += 1
+    correct = results.count("correct")
+    remaining = len(filtered) - correct
 
-    print()  # \n
+    print()
     print("Thanks for playing! :)\n\nResults\n-------")
     printc(f"Correct: {correct}", Ansi.LGREEN)
-    printc(f"Incorrect: {incorrect}", Ansi.LRED)
+    printc(f"Remaining: {remaining}", Ansi.GRAY)
 
     return 0
 
