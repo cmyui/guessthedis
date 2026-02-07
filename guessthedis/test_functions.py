@@ -114,6 +114,105 @@ def raise_exception() -> None:
     raise Exception("This is an exception")
 
 
+# -- Beginner --
+
+
+@register
+def ternary_expression(x: int) -> str:
+    return "positive" if x > 0 else "non-positive"
+
+
+@register
+def boolean_short_circuit(a: int, b: int) -> int:
+    return a and b or 0
+
+
+@register
+def string_formatting(name: str, age: int) -> str:
+    return f"{name} is {age} years old"
+
+
+@register
+def multiple_assignment() -> tuple[int, int, int]:
+    a, b, c = 1, 2, 3
+    return (a, b, c)
+
+
+# -- Intermediate --
+
+
+@register
+def try_except() -> int:
+    try:
+        return int("abc")
+    except ValueError:
+        return -1
+
+
+@register
+def with_statement() -> str:
+    with open("/dev/null") as f:
+        return f.read()
+
+
+@register
+def chained_comparison(x: int) -> bool:
+    return 0 < x < 10
+
+
+@register
+def star_unpacking() -> list[int]:
+    a, *b, c = [1, 2, 3, 4, 5]
+    return b
+
+
+@register
+def del_variable() -> None:
+    x = 42
+    del x
+
+
+# -- Advanced --
+
+
+@register
+def walrus_operator(data: list[int]) -> int | None:
+    if (n := len(data)) > 3:
+        return n
+    return None
+
+
+@register
+def generator_function() -> int:
+    def gen():
+        yield 1
+        yield 2
+        yield 3
+
+    return sum(gen())
+
+
+@register
+def nested_closure() -> int:
+    x = 10
+
+    def inner() -> int:
+        return x + 1
+
+    return inner()
+
+
+@register
+def match_statement(command: str) -> str:
+    match command:
+        case "quit":
+            return "goodbye"
+        case "hello":
+            return "hi there"
+        case _:
+            return "unknown"
+
+
 # TODO: add support for multiple disassembly definitions
 #       so we can do cool stuff like functions and classes
 
