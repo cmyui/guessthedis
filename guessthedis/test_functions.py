@@ -213,17 +213,14 @@ def match_statement(command: str) -> str:
             return "unknown"
 
 
-# TODO: add support for multiple disassembly definitions
-#       so we can do cool stuff like functions and classes
-
-# @register
-# def create_function() -> None:
-#     def f(x: int, y: int) -> int:
-#         return x + y
+@register
+def create_function() -> None:
+    def f(x: int, y: int) -> int:
+        return x + y
 
 
-# @register
-# def create_class() -> None:
-#     class Player:
-#         def __init__(self, name: str) -> None:
-#             self.name = name
+@register
+def create_class() -> None:
+    class Player:
+        def __init__(self, name: str) -> None:
+            self.name = name
