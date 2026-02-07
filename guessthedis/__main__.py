@@ -266,9 +266,11 @@ DIFFICULTY_CHOICES = [
     "beginner",
     "intermediate",
     "advanced",
+    "ridiculous",
     "beginner+",
     "intermediate+",
     "advanced+",
+    "ridiculous+",
 ]
 
 
