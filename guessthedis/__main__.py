@@ -236,7 +236,11 @@ def _quiz_instructions(
         _quiz_instructions(code_obj)
 
 
-def test_user(disassembly_target: Callable[..., Any]) -> bool:
+def test_user(
+    disassembly_target: Callable[..., Any],
+    *,
+    console: Console,
+) -> bool:
     """Test the user on a single function."""
     source_code_lines = get_source_code_lines(disassembly_target)
     max_len_line = max(len(line) for line in source_code_lines)
@@ -245,11 +249,11 @@ def test_user(disassembly_target: Callable[..., Any]) -> bool:
     syntax = Syntax(
         code="\n".join(source_code_lines),
         lexer="python",
-        theme="monokai",  # TODO: customization?
+        theme="monokai",
         line_numbers=True,
         code_width=max_len_line + 1,
     )
-    Console().print(syntax)  # TODO: can i create this once and reuse?
+    console.print(syntax)
 
     print("Write the disassembly below (line by line):")
     _quiz_instructions(disassembly_target)
@@ -267,11 +271,12 @@ def main() -> int:
     # https://docs.python.org/3/library/readline.html
     import readline
 
+    console = Console()
     correct = incorrect = 0
 
     for function in test_functions.functions:
         try:
-            disassembled_correctly = test_user(function)
+            disassembled_correctly = test_user(function, console=console)
         except KeyboardInterrupt:
             # NOTE: ^C can be used to exit the game early
             print("\x1b[2K", end="\r")  # clear current line
