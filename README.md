@@ -6,25 +6,33 @@ Supports Python 3.10+. Note that bytecode instructions differ between Python
 versions, so the expected answers depend on which version you're running.
 
 # How to play
-There are 30 built-in functions organized by difficulty (beginner, intermediate,
-advanced) in `guessthedis/test_functions.py`. You can also write your own and
-apply the `@register` decorator to include them.
+There are 60+ built-in functions organized by difficulty (beginner,
+intermediate, advanced, ridiculous) in `guessthedis/test_functions.py`. You can
+also write your own and apply the `@register` decorator to include them.
 
 ```py
-@register
+@register(Difficulty.BEGINNER)
 def unary_op() -> int:
     x = 5
     return -x
 ```
-Run the program with `python -m guessthedis`. It will show each function and
-prompt you to write the disassembly (opcode name & arguments) line by line.
+Run the program with `uv run python -m guessthedis`. It will show each function
+and prompt you to write the disassembly (opcode name & arguments) line by line.
+
+You can filter by difficulty with the `-d` flag:
+```
+$ uv run python -m guessthedis -d beginner    # only beginner
+$ uv run python -m guessthedis -d advanced+   # advanced and above
+```
 
 String arguments can be typed bare or quoted -- both `load_fast x` and
 `load_fast 'x'` are accepted. String constants with whitespace must be
 quoted (e.g. `load_const ' is '`).
 
 ```
-$ python -m guessthedis
+$ uv run python -m guessthedis
+(^D = cheatsheet, ^G = navigate, ^C = exit)
+
 Given the following function:
   1 def unary_op() -> int:
   2     x = 5
@@ -42,14 +50,23 @@ Correct!
 Functions containing nested code objects (inner functions, classes) will also
 quiz you on the inner disassembly after the outer function is complete.
 
-When you exit the game (e.g. with `^C`), your total score will be shown.
+# Keyboard shortcuts
+
+| Key | Action |
+|-----|--------|
+| `^D` | Open cheatsheet showing the correct disassembly in `less` |
+| `^G` | Open challenge navigation picker to jump between challenges |
+| `^C` | Exit the game |
+| `Up`/`Down` | Recall previous inputs (history) |
+
+When you exit the game, your results will be shown.
 ```
 Thanks for playing! :)
 
 Results
 -------
 Correct: 6
-Incorrect: 5
+Remaining: 5
 $
 ```
 
