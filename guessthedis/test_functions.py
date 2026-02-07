@@ -173,6 +173,24 @@ def try_except() -> int:
 
 
 @register(Difficulty.ADVANCED)
+def try_except_multiple() -> int:
+    try:
+        return int("abc")
+    except ValueError:
+        return -1
+    except TypeError:
+        return -2
+
+
+@register(Difficulty.ADVANCED)
+def try_except_tuple() -> int:
+    try:
+        return int("abc")
+    except (ValueError, TypeError):
+        return -1
+
+
+@register(Difficulty.ADVANCED)
 def with_statement() -> str:
     with open("/dev/null") as f:
         return f.read()
