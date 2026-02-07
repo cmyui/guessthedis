@@ -161,7 +161,7 @@ class TestUnparseableOpcodes:
 
 class TestFunctionRegistry:
     def test_all_functions_disassemble(self) -> None:
-        for func in test_functions.functions:
+        for _difficulty, func in test_functions.functions:
             # should not raise
             instructions = list(dis.get_instructions(func))
             assert len(instructions) > 0, f"{func.__name__} has no instructions"
@@ -170,5 +170,5 @@ class TestFunctionRegistry:
         assert len(test_functions.functions) > 0
 
     def test_no_duplicate_names(self) -> None:
-        names = [f.__name__ for f in test_functions.functions]
+        names = [f.__name__ for _d, f in test_functions.functions]
         assert len(names) == len(set(names))
