@@ -6,23 +6,25 @@ the repo @ https://github.com/cmyui/guessthedis
 
 import argparse
 import ast
-import contextlib
 import dis
 import inspect
-import signal
 import subprocess
 import tempfile
 import textwrap
 import types
-from enum import IntEnum
 from typing import Any
 from typing import Callable
-from typing import Iterator
 
 from rich.console import Console
 from rich.syntax import Syntax
 
 from . import test_functions
+from .terminal import Ansi
+from .terminal import NavigationRequested
+from .terminal import ignore_sigint
+from .terminal import pick_challenge
+from .terminal import printc
+from .terminal import read_line
 from .test_functions import Difficulty
 
 __author__ = "Joshua Smith (cmyui)"
@@ -49,47 +51,6 @@ OPCODES_WITH_UNPARSEABLE_ARGUMENT = (
         if name in dis.opmap
     )
 )
-
-
-class Ansi(IntEnum):
-    # Default colours
-    BLACK = 30
-    RED = 31
-    GREEN = 32
-    YELLOW = 33
-    BLUE = 34
-    MAGENTA = 35
-    CYAN = 36
-    WHITE = 37
-
-    # Light colours
-    GRAY = 90
-    LRED = 91
-    LGREEN = 92
-    LYELLOW = 93
-    LBLUE = 94
-    LMAGENTA = 95
-    LCYAN = 96
-    LWHITE = 97
-
-    RESET = 0
-
-    def __repr__(self) -> str:
-        return f"\x1b[{self.value}m"
-
-
-@contextlib.contextmanager
-def ignore_sigint() -> Iterator[None]:
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
-    try:
-        yield None
-    finally:
-        signal.signal(signal.SIGINT, signal.default_int_handler)
-
-
-def printc(string: str, col: Ansi, end="\n") -> None:
-    """Print out a given string, with a colour."""
-    print(f"{col!r}{string}\x1b[m", end=end)
 
 
 def get_source_code_lines(disassembly_target: Callable[..., Any]) -> list[str]:
@@ -152,7 +113,7 @@ def _quiz_instructions(
         # loop indefinitely to get valid user input
         while True:
             try:
-                user_input_raw = input(f"{instruction.offset}: ").strip()
+                user_input_raw = read_line(f"{instruction.offset}: ").strip()
             except EOFError:
                 # NOTE: ^D can be used to show the correct disassembly "cheatsheet"
                 print("\x1b[2K", end="\r")  # clear current line
@@ -306,30 +267,33 @@ def main() -> int:
         printc("No functions matched the given difficulty", Ansi.LRED)
         return 1
 
-    # use gnu readline interface
-    # https://docs.python.org/3/library/readline.html
-    import readline  # noqa: F401
-
     console = Console()
-    correct = incorrect = 0
+    results: list[str] = ["pending"] * len(filtered)
+    current_index = 0
 
-    for _difficulty, function in filtered:
+    while current_index < len(filtered):
+        printc("(^D = cheatsheet, ^G = navigate, ^C = exit)", Ansi.GRAY)
+        print()
+        _difficulty, function = filtered[current_index]
         try:
-            disassembled_correctly = test_user(function, console=console)
+            test_user(function, console=console)
+            results[current_index] = "correct"
+            current_index += 1
         except KeyboardInterrupt:
-            # NOTE: ^C can be used to exit the game early
-            print("\x1b[2K", end="\r")  # clear current line
+            print("\x1b[2K", end="\r")
             break
+        except NavigationRequested:
+            picked = pick_challenge(filtered, results, current_index)
+            if picked is not None:
+                current_index = picked
 
-        if disassembled_correctly:
-            correct += 1
-        else:
-            incorrect += 1
+    correct = results.count("correct")
+    remaining = len(filtered) - correct
 
-    print()  # \n
+    print()
     print("Thanks for playing! :)\n\nResults\n-------")
     printc(f"Correct: {correct}", Ansi.LGREEN)
-    printc(f"Incorrect: {incorrect}", Ansi.LRED)
+    printc(f"Remaining: {remaining}", Ansi.GRAY)
 
     return 0
 
