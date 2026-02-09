@@ -25,6 +25,14 @@ $ uv run python -m guessthedis -d beginner    # only beginner
 $ uv run python -m guessthedis -d advanced+   # advanced and above
 ```
 
+You can run specific test functions by name with the `-f` flag:
+```
+$ uv run python -m guessthedis -f for_else             # single function
+$ uv run python -m guessthedis -f for_else try_else    # multiple functions
+```
+
+Note: `-d` and `-f` are mutually exclusive — use one or the other, not both.
+
 String arguments can be typed bare or quoted -- both `load_fast x` and
 `load_fast 'x'` are accepted. String constants with whitespace must be
 quoted (e.g. `load_const ' is '`).
