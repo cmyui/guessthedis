@@ -238,17 +238,6 @@ def raise_from() -> None:
 
 
 @register(Difficulty.INTERMEDIATE)
-def try_else() -> int:
-    try:
-        x = 1
-    except ValueError:
-        x = -1
-    else:
-        x = 0
-    return x
-
-
-@register(Difficulty.INTERMEDIATE)
 def try_finally() -> int:
     try:
         x = 1
@@ -450,6 +439,17 @@ def match_or_guard(data: int) -> str:
             return "big"
         case _:
             return "other"
+
+
+@register(Difficulty.ADVANCED)
+def try_else() -> int:
+    try:
+        x = 1
+    except ValueError:
+        x = -1
+    else:
+        x = 0
+    return x
 
 
 if sys.version_info >= (3, 11):
