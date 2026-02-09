@@ -121,6 +121,11 @@ def lambda_expression() -> int:
     return f(1, 2)
 
 
+@register(Difficulty.BEGINNER)
+def unary_not(x: bool) -> bool:
+    return not x
+
+
 @register(Difficulty.INTERMEDIATE)
 def if_else() -> int:
     x = True
@@ -274,6 +279,35 @@ def star_call() -> None:
 @register(Difficulty.INTERMEDIATE)
 def fstring_format_spec(value: float, width: int, precision: int) -> str:
     return f"{value:{width}.{precision}f}"
+
+
+@register(Difficulty.INTERMEDIATE)
+def slice_access(l: list[int]) -> list[int]:
+    return l[1:3]
+
+
+@register(Difficulty.INTERMEDIATE)
+def slice_store() -> list[int]:
+    l = [1, 2, 3, 4, 5]
+    l[1:3] = [10, 20]
+    return l
+
+
+@register(Difficulty.INTERMEDIATE)
+def attribute_store_delete() -> None:
+    class Obj:
+        pass
+
+    o = Obj()
+    o.x = 5
+    del o.x
+
+
+@register(Difficulty.INTERMEDIATE)
+def dict_unpacking_literal() -> dict[str, int]:
+    a = {"x": 1}
+    b = {"y": 2}
+    return {**a, "z": 3, **b}
 
 
 @register(Difficulty.ADVANCED)
