@@ -238,6 +238,17 @@ def raise_from() -> None:
 
 
 @register(Difficulty.INTERMEDIATE)
+def try_else() -> int:
+    try:
+        x = 1
+    except ValueError:
+        x = -1
+    else:
+        x = 0
+    return x
+
+
+@register(Difficulty.INTERMEDIATE)
 def try_finally() -> int:
     try:
         x = 1
