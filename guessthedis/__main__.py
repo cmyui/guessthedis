@@ -12,19 +12,20 @@ import subprocess
 import tempfile
 import textwrap
 import types
-from typing import Any
-from typing import Callable
+from typing import Any, Callable
 
 from rich.console import Console
 from rich.syntax import Syntax
 
 from . import test_functions
-from .terminal import Ansi
-from .terminal import NavigationRequested
-from .terminal import ignore_sigint
-from .terminal import pick_challenge
-from .terminal import printc
-from .terminal import read_line
+from .terminal import (
+    Ansi,
+    NavigationRequested,
+    ignore_sigint,
+    pick_challenge,
+    printc,
+    read_line,
+)
 from .test_functions import Difficulty
 
 __author__ = "Joshua Smith (cmyui)"
@@ -251,20 +252,44 @@ def main() -> int:
         default=None,
         help="filter functions by difficulty level (append '+' for that level and above)",
     )
+    parser.add_argument(
+        "-f",
+        "--functions",
+        nargs="+",
+        default=None,
+        metavar="NAME",
+        help="run only the specified test function(s) by name",
+    )
     args = parser.parse_args()
+
+    if args.difficulty is not None and args.functions is not None:
+        parser.error("--difficulty and --functions are mutually exclusive")
+
+    filtered = list(test_functions.functions)
 
     if args.difficulty is not None:
         min_difficulty, and_above = _parse_difficulty_filter(args.difficulty)
         filtered = [
             (d, f)
-            for d, f in test_functions.functions
+            for d, f in filtered
             if (d >= min_difficulty if and_above else d == min_difficulty)
         ]
-    else:
-        filtered = test_functions.functions
+
+    if args.functions is not None:
+        requested = {name.lower() for name in args.functions}
+        available = {f.__name__.lower() for _, f in filtered}
+        unknown = requested - available
+        if unknown:
+            printc(
+                f"Unknown function(s): {', '.join(sorted(unknown))}",
+                Ansi.LRED,
+            )
+            return 1
+        filtered = [(d, f) for d, f in filtered if f.__name__.lower() in requested]
 
     if not filtered:
-        printc("No functions matched the given difficulty", Ansi.LRED)
+        arg_name = "difficulty" if args.difficulty is not None else "functions"
+        printc(f"No functions matched the given {arg_name}", Ansi.LRED)
         return 1
 
     console = Console()
